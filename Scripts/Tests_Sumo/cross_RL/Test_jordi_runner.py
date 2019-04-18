@@ -77,81 +77,142 @@ def take_action(decision):
 
 def get_state():
 
-    state = np.zeros((1,9))
+    state = np.zeros(9)
 
     lanes = ["4i_0","2i_0","3i_0","1i_0"]
     for i,lane in enumerate(lanes):
 
-        state[0,i] = traci.lane.getLastStepVehicleNumber(lane)
-        state[0,i+4] = traci.lane.getLastStepMeanSpeed(lane)
+        state[i] = traci.lane.getLastStepVehicleNumber(lane)
+        state[i+4] = traci.lane.getLastStepMeanSpeed(lane)
 
-    state[0,8] = traci.trafficlight.getPhase("0")
+    state[8] = traci.trafficlight.getPhase("0")
     return state
 
 
 def get_reward(state):
-    return -np.sum(state[0,0:4])
+    return -np.sum(state[0:4])
+
+def init_replay(n):
+
+    rewards = []
+    actions = []
 
 
-def run_NN():
+    # Run first 10 seconds of the simulation
+    traci.simulationStep(10)
+    # Initialize replay database
+    states = get_state().reshape(1,9)
+    # Choose action randomly and apply it to the network
+    actions.append(np.random.choice([0,1])) # change TL (=1) keep current state (=0)
+    take_action(actions[-1])
+
+    for i in range(n):
+
+        # Collecting reward of action
+        rewards.append(get_reward(states[-1]))
+        # Run 10 more sec of simulations
+        traci.simulationStep(10*(i+2))
+        # Observe new starte
+        states = np.vstack((D,get_state()))
+        # Choose action randomly and apply it to the network
+        actions.append(np.random.choice([0,1])) # change TL (=1) keep current state (=0)
+        take_action(actions[-1])
+
+    return states,actions,rewards
+
+def sample_transitions(states,actions,rewards):
+    mini_batch = np.random.sample(range(len(states)-1))
+
+        pass
+
+
+def run_DDQN():
     """execute the TraCI control loop"""
 
-    # ANN
-    model = define_ANN()
+    # Initialize Q-networks with random values
+    model_target = define_ANN()
+    model_value = define_ANN()
 
-    # now execute the q learning
-    y = 0.9                                                                        # how much to value future rewards (long-term max vs short-term max)
-    eps = 0.2                                                                       # how much exploration
-    decay_factor = 0.999                                                            # how much to lower exploration as learning goes on
-    reward_avg_list = []                                                            # average reward collected
-    num_episodes = 1
+    # Initialize params
+    y = 0.9  # how much to value future rewards (long-term max vs short-term max)
+    eps = 0.2 # how much exploration
+    decay_factor = 0.999 # how much to lower exploration as learning goes on
+    reward_avg_list = [] # average reward collected
+    num_episodes = 1 # Number of episodes to run
+
     for i in range(num_episodes):
-        #state = env.reset()                                                         # when called, resets the environment
-                                                               # reduces the exploration rate
-        print("Episode {} of {}".format(i + 1, num_episodes))                       # print progress
+
+        # Initialise SUMO
+        sumoBinary = checkBinary('sumo')
+        traci.start([sumoBinary, "-c", "cross.sumocfg","--tripinfo-output", "tripinfo.xml"])
+
+        # Number of observations in replay database
+        n = 100
+
+        # Initialize replay database with random actions
+        states,actions,rewards = init_replay(n)
+
+        # Printing episode info
+        print("Episode {} of {}".format(i + 1, num_episodes))
+
         reward_sum = 0
         reward_hist =[]
         reward_evol = []                                                             # initialise reward sum
-        step = 0
-        traci.simulationStep(10)                                                    # Initialise simulation
-        while traci.simulation.getMinExpectedNumber() > 0:                          # Run simulation until there is no more cars in the network
-            eps *= decay_factor  
-            print(step)
-            # Get current state
-            state = get_state()
 
-            # take action and get reward + new state
+        eps *= decay_factor
+
+        # Run simulation until there is no more cars in the network
+        while traci.simulation.getMinExpectedNumber() > 0:
+
+            # Run 10 more sec of simulations
+            traci.simulationStep(10*(n+2))
+            # Collecting reward of action
+            rewards.append(get_reward(states[-1]))
+            # Observe new starte
+            states = np.vstack((states,get_state()))
+
+            # take action randomly eps [%] times
             if np.random.random() < eps:
-                action = random.sample((1,0),1) # change TL (=1) keep current state (=0)
-                take_action(action)    # randomly choose whether to explore or exploit choosing TL phase
+                # Choose action randomly and apply it to the network
+                actions.append(np.random.choice([0,1]))
+                take_action(actions[-1])
             else:
-                action = np.argmax(model.predict(state))  # choose action that maximises predicted reward
-                take_action(action)
+                # choose action that maximises predicted reward on value model
+                actions.append(np.argmax(model_value.predict(D[-1])))
+                take_action(actions[-1])
 
-            traci.simulationStep(10*step)                                                # Simulation step 10 s
+            # Perform model updates
+            # Sample mini-batch (m) of transitions from D,actions,reward_sum
+            states_m,actions_m,rewards_m,states_m_p = sample_transitions(states,actions,rewards)
+
+
+
+
 
             new_state = get_state()
             reward = get_reward(new_state)
 
             target = reward + y * np.max(model.predict(new_state)) #
             target_vec = model.predict(state)[0]
+            model.fit(state, target_vec.reshape(-1, 2), epochs=1, verbose=0)
 
 
             target_vec[action] = target
 
-            model.fit(state, target_vec.reshape(-1, 2), epochs=1, verbose=0)
+
             state = new_state
             reward_sum += reward
             reward_hist.append(reward_sum)
             reward_evol.append(reward)
             step += 1
         #r_avg_list.append(reward_sum / 100)
+        traci.close()
+        sys.stdout.flush()
 
-        return reward_hist,reward_evol
+    return reward_hist,reward_evol
 
 
-    traci.close()
-    sys.stdout.flush()
+
 
 def run_wo():
     """execute the TraCI control loop"""
@@ -193,7 +254,7 @@ def run_wo():
 # this is the main entry point of this script
 if __name__ == "__main__":
 
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
 
     # first, generate the route file for this simulation
     generate_routefile()
@@ -202,7 +263,7 @@ if __name__ == "__main__":
     # subprocess and then the python script connects and runs
     traci.start([sumoBinary, "-c", "cross.sumocfg",
                              "--tripinfo-output", "tripinfo.xml"])
-    reward_hist_NN,reward_evol_NN = run_NN()
+    reward_hist_NN,reward_evol_NN = run_DDQN()
 
     traci.start([sumoBinary, "-c", "cross2.sumocfg",
                                  "--tripinfo-output", "tripinfo.xml"])
