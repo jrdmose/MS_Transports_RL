@@ -116,7 +116,7 @@ def run_NN():
         q_evol = []
         state_evol = []
         new_state_evol = []
-        action = []
+        action_evol = []
         step = 0
         traci.simulationStep(10)                                                    # Initialise simulation
         while traci.simulation.getMinExpectedNumber() > 0:                          # Run simulation until there is no more cars in the network
