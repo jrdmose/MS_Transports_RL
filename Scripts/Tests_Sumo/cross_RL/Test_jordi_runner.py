@@ -111,11 +111,16 @@ def run_NN():
         print("Episode {} of {}".format(i + 1, num_episodes))                       # print progress
         reward_sum = 0
         reward_hist =[]
-        reward_evol = []                                                             # initialise reward sum
+        reward_evol = []
+        target_evol = []                                                            # initialise reward sum
+        q_evol = []
+        state_evol = []
+        new_state_evol = []
+        action = []
         step = 0
         traci.simulationStep(10)                                                    # Initialise simulation
         while traci.simulation.getMinExpectedNumber() > 0:                          # Run simulation until there is no more cars in the network
-            eps *= decay_factor  
+            eps *= decay_factor
             print(step)
             # Get current state
             state = get_state()
@@ -142,12 +147,18 @@ def run_NN():
             model.fit(state, target_vec.reshape(-1, 2), epochs=1, verbose=0)
             state = new_state
             reward_sum += reward
+
+            action_evol.append(action)
+            state_evol.append(state)
+            new_state_evol.append(new_state)
+            target_evol.append(target)
+            q_evol.append(target_vec)
             reward_hist.append(reward_sum)
             reward_evol.append(reward)
             step += 1
         #r_avg_list.append(reward_sum / 100)
 
-        return reward_hist,reward_evol
+        return reward_hist,reward_evol, action_evol, state_evol, new_state_evol, target_evol, q_evol
 
 
     traci.close()
@@ -202,7 +213,7 @@ if __name__ == "__main__":
     # subprocess and then the python script connects and runs
     traci.start([sumoBinary, "-c", "cross.sumocfg",
                              "--tripinfo-output", "tripinfo.xml"])
-    reward_hist_NN,reward_evol_NN = run_NN()
+    reward_hist_NN, reward_evol_NN, action_evol, state_evol, new_state_evol, target_evol, q_evol = run_NN()
 
     traci.start([sumoBinary, "-c", "cross2.sumocfg",
                                  "--tripinfo-output", "tripinfo.xml"])
@@ -215,4 +226,15 @@ if __name__ == "__main__":
     plt.plot(reward_evol)
     plt.plot(reward_evol_NN)
     plt.legend(["Rw_evol wo RL","Rw_evol w RL"])
+    plt.show()
+    plt.plot(state_evol)
+    plt.plot(new_state_evol)
+    plt.legend(["state","new_state"])
+    plt.show()
+    plt.plot(target_evol)
+    plt.plot(q_evol)
+    plt.legend(["target","q"])
+    plt.show()
+    plt.plot(action_evol)
+    plt.legend(["action"])
     plt.show()
