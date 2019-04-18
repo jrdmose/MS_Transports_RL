@@ -104,7 +104,7 @@ def run_NN():
     eps = 0.2                                                                       # how much exploration
     decay_factor = 0.999                                                            # how much to lower exploration as learning goes on
     reward_avg_list = []                                                            # average reward collected
-    num_episodes = 1
+    num_episodes = 1000
     for i in range(num_episodes):
         #state = env.reset()                                                         # when called, resets the environment
                                                                # reduces the exploration rate
@@ -115,8 +115,7 @@ def run_NN():
         step = 0
         traci.simulationStep(10)                                                    # Initialise simulation
         while traci.simulation.getMinExpectedNumber() > 0:                          # Run simulation until there is no more cars in the network
-            eps *= decay_factor  
-            print(step)
+            eps *= decay_factor
             # Get current state
             state = get_state()
 
@@ -145,13 +144,12 @@ def run_NN():
             reward_hist.append(reward_sum)
             reward_evol.append(reward)
             step += 1
-        #r_avg_list.append(reward_sum / 100)
-
-        return reward_hist,reward_evol
 
 
-    traci.close()
-    sys.stdout.flush()
+        reward_avg_list.append(reward_sum)
+
+    return reward_avg_list
+
 
 def run_wo():
     """execute the TraCI control loop"""
@@ -170,7 +168,7 @@ def run_wo():
         traci.simulationStep(10)                                                    # Initialise simulation
         while traci.simulation.getMinExpectedNumber() > 0:                          # Run simulation until there is no more cars in the network
 
-            print(step)
+
             # Get current state
 
             traci.simulationStep(10*step)                                                # Simulation step 10 s
@@ -184,16 +182,15 @@ def run_wo():
             step += 1
         #r_avg_list.append(reward_sum / 100)
 
-        return reward_hist,reward_evol
+        return reward_hist
 
 
-    traci.close()
-    sys.stdout.flush()
+
 
 # this is the main entry point of this script
 if __name__ == "__main__":
 
-    sumoBinary = checkBinary('sumo-gui')
+    sumoBinary = checkBinary('sumo')
 
     # first, generate the route file for this simulation
     generate_routefile()
@@ -202,17 +199,24 @@ if __name__ == "__main__":
     # subprocess and then the python script connects and runs
     traci.start([sumoBinary, "-c", "cross.sumocfg",
                              "--tripinfo-output", "tripinfo.xml"])
-    reward_hist_NN,reward_evol_NN = run_NN()
+    reward_hist_NN = run_NN()
+
+    traci.close()
+    sys.stdout.flush()
+
 
     traci.start([sumoBinary, "-c", "cross2.sumocfg",
                                  "--tripinfo-output", "tripinfo.xml"])
-    reward_hist,reward_evol = run_wo()
+    reward_hist = run_wo()
+
+    traci.close()
+    sys.stdout.flush()
 
     plt.plot(reward_hist)
     plt.plot(reward_hist_NN)
     plt.legend(["Rw_hist wo RL","Rw_hist w RL"])
     plt.show()
-    plt.plot(reward_evol)
-    plt.plot(reward_evol_NN)
-    plt.legend(["Rw_evol wo RL","Rw_evol w RL"])
-    plt.show()
+    # plt.plot(reward_evol)
+    # plt.plot(reward_evol_NN)
+    # plt.legend(["Rw_evol wo RL","Rw_evol w RL"])
+    # plt.show()
