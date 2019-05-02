@@ -1,3 +1,9 @@
+### JupyterNotebook ###
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+
+### Include some references only ###
 References/*
 !References/Fundamental/
 !References/State _Action_Reward_Survey/
