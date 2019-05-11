@@ -27,7 +27,7 @@ Run setup.sh
 bash setup.sh
 ```
 
-**Option 2 **
+**Option 2**
 
 Install sumo binaries
 
