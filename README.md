@@ -16,3 +16,33 @@ Supervisors: Hrvoje Stojic and Anestis Papanikolaou
 - Data: Network and demand files needed for SUMO simulations
 - Scripts: Any script is needed to run the simulation.
 - Report
+
+### Installation guide
+
+**Option 1**
+
+Run setup.sh 
+
+```
+bash setup.sh
+```
+
+**Option 2**
+
+Install sumo binaries
+
+```
+sudo apt-get install sumo sumo-tools sumo-doc 
+```
+
+Set SUMO_HOME variable (default sumo installation path is /usr/share/sumo)
+
+```
+echo 'export SUMO_HOME="/usr/share/sumo"' >> ~/.bashrc
+source ~/.bashrc
+```
+Installing required packages
+
+```
+pip3 install numpy tensorflow keras
+```
