@@ -306,6 +306,28 @@ class DoubleDQN:
 
         return all_trans
 
+    def evaluate_cv(self, env, policy, **kwargs):
+        """Helper function for cv.
+
+        Parameters
+        ----------
+        env : environment instance
+        """
+
+        env.start_simulation()
+        nextstate = env.state.get()
+        done = False
+        it = 0
+
+        self.warm_up_net( env, WARM_UP_NET)
+
+        while not done and it < self.max_ep_len:
+            it +=1
+
+        env.stop_simulation()
+
+        return it
+
     def histo_summary(self, values, bins=1000):
         """Helper function in train method. Log a histogram of the tensor of values for tensorboard.
 
