@@ -80,7 +80,7 @@ class DoubleDQN:
         self.q_network = q_network
         self.target_q_network = target_q_network
         self.target_q_network.set_weights(self.q_network.get_weights())
-        self.__compile(optimizer, loss_func,opt_metric)
+        self.__compile(optimizer, loss_func, opt_metric)
         self.memory = memory
         self.gamma = gamma
         self.target_update_freq = target_update_freq
@@ -90,11 +90,8 @@ class DoubleDQN:
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
         self.experiment_id = experiment_id
-        self.summary_writer=summary_writer
+        self.summary_writer = summary_writer
         self.itr = 0
-
-        #self.learning_type = learning_type
-
 
     def __compile(self, optimizer, loss_func, opt_metric):
         """Initialisation method, using the keras instance compile method. """
@@ -212,7 +209,6 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
-
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
@@ -307,7 +303,7 @@ class DoubleDQN:
             transition["q_values"] = self.q_network.predict(transition["next_state"])
             transition["action"] = env.action.select_action(policy, q_values = transition["q_values"], **kwargs)
             transition["state"], transition["reward"], transition["next_state"],done = env.step(transition["action"])
-            transition["it"] +=1
+            transition["it"] += 1
 
             all_trans.append(copy.deepcopy(transition))
 
@@ -317,27 +313,6 @@ class DoubleDQN:
 
         return all_trans, mean_duration
 
-    def evaluate_cv(self, env, policy, **kwargs):
-        """Helper function for cv.
-
-        Parameters
-        ----------
-        env : environment instance
-        """
-
-        env.start_simulation()
-        nextstate = env.state.get()
-        done = False
-        it = 0
-
-        self.warm_up_net( env, WARM_UP_NET)
-
-        while not done and it < self.max_ep_len:
-            it +=1
-
-        env.stop_simulation()
-
-        return it
 
     def histo_summary(self, values, bins=1000):
         """Helper function in train method. Log a histogram of the tensor of values for tensorboard.
