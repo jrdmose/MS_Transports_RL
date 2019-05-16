@@ -2,6 +2,8 @@
 ####################################
 import os, sys
 import random
+import numpy as np
+import xml.etree.ElementTree as ET
 
 
 def get_output_folder(parent_dir, exp_id):
@@ -93,3 +95,14 @@ def generate_routefile():
                     vehNr, i), file=routes)
                 vehNr += 1
         print("</routes>", file=routes)
+
+def compute_mean_duration(parent_dir):
+
+    tree = ET.parse(os.path.join(parent_dir,'tripinfo.xml'))
+    root = tree.getroot()
+
+    mean_duration = []
+    for veh in root:
+        mean_duration.append(float(veh.get("duration")))
+
+    return np.mean(mean_duration)

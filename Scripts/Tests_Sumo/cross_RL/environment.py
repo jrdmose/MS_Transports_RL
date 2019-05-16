@@ -96,7 +96,7 @@ class Env:
         self.counter = np.zeros((1,2))
 
 
-    def start_simulation(self):
+    def start_simulation(self, parent_dir = None ):
         """Opens a connection to sumo/traci [with or without GUI] and
         updates obs atribute  (the current state of the environment).
         """
@@ -104,6 +104,10 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
                     '-r' ,self.route]
+
+        if parent_dir:
+            sumo_cmd.append('--tripinfo-output')
+            sumo_cmd.append(parent_dir + '/tripinfo.xml')
 
         if self.use_gui:
             sumo_cmd.append('--start')
@@ -337,3 +341,6 @@ class Action:
         #Horizontal row
         elif env.state.get()[:,10] > h_row_t:
             return 0
+
+    def select_discepsgreedy(self, q_values, eps, itr):
+        pass

@@ -128,7 +128,7 @@ class DoubleDQN:
 
         print("Filling experience replay memory...")
 
-        env.start_simulation()
+        env.start_simulation(self.output_dir)
         self.warm_up_net( env, WARM_UP_NET)
 
         for i in range(self.num_burn_in):
@@ -197,7 +197,7 @@ class DoubleDQN:
 
             # Each time an episode is run need to create a new random routing
             tools.generate_routefile()
-            env.start_simulation()
+            env.start_simulation(self.output_dir)
             self.warm_up_net( env, WARM_UP_NET)
 
             nextstate = env.state.get()
@@ -212,6 +212,7 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
+
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
@@ -223,33 +224,34 @@ class DoubleDQN:
 
                 if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
                     # create list of stats for Tensorboard, add scalars
-                    summary_list = [tf.Summary.Value(tag = 'loss',
-                                                      simple_value = loss),
-                                    tf.Summary.Value(tag = 'Action 1',
-                                                      simple_value = self.q_network.layers[-1].get_weights()[1][0]),
-                                    tf.Summary.Value(tag = 'Action 2',
-                                                      simple_value = self.q_network.layers[-1].get_weights()[1][1]),
-                                    tf.Summary.Value(tag = 'Episode Length',
-                                                      simple_value = stats["episode_length"])]
+                    training_data = [tf.Summary.Value(tag = 'loss',
+                                                      simple_value = loss)]
+                                    #                   ,
+                                    # tf.Summary.Value(tag = 'Action 1',
+                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][0]),
+                                    # tf.Summary.Value(tag = 'Action 2',
+                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][1]),
+                                    # tf.Summary.Value(tag = 'Episode Length',
+                                    #                   simple_value = stats["episode_length"])]
 
                     # add histogram of weights to list of stats for Tensorboard
                     for index, layer in enumerate(self.q_network.layers):
 
                         if index != len(self.q_network.layers) - 1:
-                            summary_list.append(tf.Summary.Value(tag = str(layer.name) + " weights" ,
+                            training_data.append(tf.Summary.Value(tag = str(layer.name) + " weights" ,
                                                             histo = self.histo_summary(layer.get_weights()[0])))
                             if len(layer.get_weights()) > 1:
-                                summary_list.append(tf.Summary.Value(tag = str(layer.name) + " relu" ,
+                                training_data.append(tf.Summary.Value(tag = str(layer.name) + " relu" ,
                                                             histo = self.histo_summary(layer.get_weights()[1])))
 
                         else:
-                            summary_list.append(tf.Summary.Value(tag = str(layer.name) + " output weights" ,
+                            training_data.append(tf.Summary.Value(tag = str(layer.name) + " output weights" ,
                                                             histo = self.histo_summary(layer.get_weights()[0])))
-                            summary_list.append(tf.Summary.Value(tag = "output values",
+                            training_data.append(tf.Summary.Value(tag = "output values",
                                                             histo = self.histo_summary(layer.get_weights()[1])))
 
                     # write the list of stats to the logdd
-                    self.summary_writer.add_summary(tf.Summary(value = summary_list), global_step=self.itr)
+                    self.summary_writer.add_summary(tf.Summary(value = training_data), global_step=self.itr)
 
                 self.itr += 1
 
@@ -259,13 +261,17 @@ class DoubleDQN:
                 stats['max_q_value'] += max(q_values)
 
             env.stop_simulation()
+
+            mean_delay = tools.compute_mean_duration(self.output_dir)
+
+            episode_summary = [tf.Summary.Value(tag = 'reward',
+                                              simple_value = stats['total_reward']),
+                               tf.Summary.Value(tag = 'Average vehicle delay',
+                                              simple_value = mean_delay)]
+            self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
+
             self.trained_episodes += 1
 
-            all_stats.append(stats)
-            all_rewards.append(stats['total_reward'])
-
-        print('\nCurrent reward mean+std: {} {}'.format(np.mean(stats['total_reward']),np.std(stats['total_reward'])))
-        return all_stats
 
     def evaluate(self, env, policy, **kwargs):
         """Use trained agent to run a simulation.
@@ -275,7 +281,7 @@ class DoubleDQN:
         env : environment instance
         """
 
-        env.start_simulation()
+        env.start_simulation(self.output_dir)
         nextstate = env.state.get()
         done = False
         it = 0
@@ -293,6 +299,9 @@ class DoubleDQN:
 
         all_trans = []
 
+        if policy == 'fixed':
+            kwargs["env"] = env
+
         while not done and it < self.max_ep_len:
             #import pdb; pdb.set_trace()
             transition["q_values"] = self.q_network.predict(transition["next_state"])
@@ -304,7 +313,9 @@ class DoubleDQN:
 
         env.stop_simulation()
 
-        return all_trans
+        mean_duration = tools.compute_mean_duration(self.output_dir)
+
+        return all_trans, mean_duration
 
     def evaluate_cv(self, env, policy, **kwargs):
         """Helper function for cv.
