@@ -4,11 +4,6 @@ import os, sys
 import random
 import numpy as np
 import xml.etree.ElementTree as ET
-import simulation
-import time
-import itertools
-import multiprocessing
-
 
 def get_output_folder(parent_dir, exp_id):
     """Return save folder parent_dir/Results/exp_id
@@ -110,79 +105,3 @@ def compute_mean_duration(parent_dir):
         mean_duration.append(float(veh.get("duration")))
 
     return np.mean(mean_duration)
-
-def take(n, iterable):
-    """Return first n items of the iterable as a list"""
-
-    return list(itertools.islice(iterable, n))
-
-
-def _worker(input, output):
-    """Runs through a chunk of the grid"""
-
-    for position, args in iter(input.get, 'STOP'):
-        print('Started with position', position + 1, 'and parameters', args)
-        result = _worker_task(position, args)
-        output.put(result)
-
-
-def _worker_task(position, args):
-    """Tells the worker what to do with grid chunk"""
-    print(position + 1, 'reached first assignment')
-    # initialise all objects
-    agent = simulation.simulator(connection_label = position)
-    print('Initialised objects for position', position + 1, 'and parameters', args)
-    # train ddqn
-    agent.ddqn.train(env = agent.env,
-                batch_size = args[0],
-                target_update_frequency = args[1],
-                gamma = args[2],
-                eps = args[3])
-
-    print('Trained agent for position', position + 1, 'and parameters', args)
-
-    result = agent.evaluate()
-
-    return '%s evaluated at position %s with parameters %s gives result %s' % \
-        (multiprocessing.current_process().name, position + 1, args, result)
-
-
-def gridsearch(param_grid):
-    """Runs a parallelised gridsearch"""
-
-    number_of_processes = 1 #multiprocessing.cpu_count()
-
-    # Set up task list
-    tasks = [(idx, val) for idx, val in enumerate(param_grid)]
-
-    # Create queues
-    task_queue = multiprocessing.Queue()
-    done_queue = multiprocessing.Queue()
-
-    # Submit tasks
-    for task in tasks:
-        task_queue.put(task)
-
-    # Start worker processes
-    for i in range(number_of_processes):
-        print('Started process #', i + 1)
-        multiprocessing.Process(target = _worker,
-                                args = (task_queue, done_queue)).start()
-
-    # Get and print results
-    print('Unordered results:')
-    for i in range(len(tasks)):
-        print('\t', done_queue.get())
-
-    # Tell child processes to stop
-    for i in range(number_of_processes):
-        task_queue.put('STOP')
-
-    # Now combine the results
-    # max = max(done_queue)
-    # max_params = parameters[results.index(max)]
-    return done_queue # Winner
-#
-#
-# if __name__ == '__main__':
-#     multiprocessing.freeze_support()

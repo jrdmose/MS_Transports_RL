@@ -172,19 +172,11 @@ class simulator:
         # Fill memory
         self.ddqn.fill_replay(self.env)
 
-    def train(self,
-        sumo_env,
-        num_episodes,
-        policy,
-        eps):
-        """Trains the agent"""
+        self.ddqn.train(env = self.env,
+                        num_episodes = self.num_episodes,
+                        policy = self.policy,
+                        eps = self.eps)
 
-        self.ddqn.train(env = sumo_env,
-            num_episodes = num_episodes,
-            policy = policy,
-            eps = eps)
-
-        print("Agent trained")
 
     def evaluate(self,
         cv = 5):
@@ -199,4 +191,4 @@ class simulator:
                 eps = self.eps)
             mean_duration_cv.append(mean_duration)
 
-        return mean_duration_cv
+        return sum(mean_duration_cv)/cv
