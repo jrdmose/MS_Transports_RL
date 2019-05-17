@@ -247,7 +247,8 @@ class DoubleDQN:
                                                             histo = self.histo_summary(layer.get_weights()[1])))
 
                     # write the list of stats to the logdd
-                    self.summary_writer.add_summary(tf.Summary(value = training_data), global_step=self.itr)
+                    if self.summary_writer !=  None:
+                        self.summary_writer.add_summary(tf.Summary(value = training_data), global_step=self.itr)
 
                 self.itr += 1
 
@@ -264,7 +265,8 @@ class DoubleDQN:
                                               simple_value = stats['total_reward']),
                                tf.Summary.Value(tag = 'Average vehicle delay',
                                               simple_value = mean_delay)]
-            self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
+            if self.summary_writer !=  None:
+                self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
 
             self.trained_episodes += 1
 

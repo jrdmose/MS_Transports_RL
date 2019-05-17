@@ -115,6 +115,7 @@ class Env:
         if self.use_gui:
             sumo_cmd.append('--start')
         traci.start(sumo_cmd, label = self.connection_label)
+        print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)
         self.state.update_state(connection = self.connection)
 
@@ -192,6 +193,7 @@ class Env:
     def stop_simulation(self):
         """Closes the sumo/traci connection"""
         self.connection.close()
+        print('Stopped connection for worker #', self.connection_label)
 
 class Observation:
     """

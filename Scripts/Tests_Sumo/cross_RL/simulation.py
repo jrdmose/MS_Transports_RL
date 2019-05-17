@@ -4,13 +4,7 @@ import doubledqn
 import tools
 import memory
 
-import numpy as np
-import matplotlib.pyplot as plt
-import time
-import itertools
-import multiprocessing
 import tensorflow as tf
-
 
 class simulator:
     """Wrapper that handles all objects needed for a simulation:
@@ -91,12 +85,12 @@ class simulator:
                  use_gui = False,
                  delta_time = 10,
                  # memory parameters
-                 max_size = 20000,
+                 max_size = 5000,
                  # additional parameters
                  policy = "epsGreedy",
                  eps = 0.1,
-                 num_episodes = 20,
-                 monitoring = True):
+                 num_episodes = 2,
+                 monitoring = False):
 
         # ddqn parameters
         self.connection_label = connection_label
@@ -130,12 +124,11 @@ class simulator:
         self.eps = eps
         self.num_episodes = num_episodes
         self.monitoring = monitoring
+        self.output_dir = tools.get_output_folder("./Logs", self.experiment_id)
 
         if self.monitoring:
-            self.output_dir = tools.get_output_folder("./Logs", self.experiment_id)
             self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
         else:
-            output_dir = None
             self.summary_writer = None
 
         # Initialize Q-networks (value and target)
@@ -207,63 +200,3 @@ class simulator:
             mean_duration_cv.append(mean_duration)
 
         return mean_duration_cv
-
-
-    def _get_chunks(self,
-        iterable,
-        chunks=1):
-        """Split parameter grid into chunks"""
-
-        lst = list(iterable)
-        grid_chunks = [["worker_" + str(i + 1), lst[i::chunks]] for i in range(chunks)]
-        return grid_chunks
-
-
-    def take(self, n, iterable):
-        """Return first n items of the iterable as a list"""
-
-        return list(itertools.islice(iterable, n))
-
-
-    def _worker(self, param_list):
-        """Runs through a chunk of the grid"""
-
-        worker_results = []
-        worker_params = []
-
-        connection_label = params[0]
-        grid = param_list[1]
-
-        for params in grid:
-            # initialise all objects
-            self.__init__(connection_label)
-            # train ddqn
-            self.ddqn.train(self,
-                        env = self.env,
-                        batch_size = params[1][0],
-                        target_update_frequency = params[1][1],
-                        gamma = params[1][2],
-                        eps = params[1][3])
-            # evaluate ddqn
-            worker_results.append(self.evaluate())
-            # store parameters
-            worker_params.append((params[0], params[1]))
-            results = zip(worker_results,worker_params)
-
-        return results
-
-
-    def gridsearch(self, param_grid):
-        """Runs a parallelised gridsearch"""
-
-        jobs = []
-        chunked_param_list = self._get_chunks(param_grid, chunks = multiprocessing.cpu_count())
-        pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
-        results = pool.map(self._worker, chunked_param_list)
-        pool.close()
-        pool.join()
-        # Now combine the results
-        print(results, parameters)
-        max = max(results)
-        max_params = parameters[results.index(max)]
-        return max, max_params  # Winner
