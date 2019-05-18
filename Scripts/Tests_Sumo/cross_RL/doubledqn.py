@@ -80,7 +80,7 @@ class DoubleDQN:
         self.q_network = q_network
         self.target_q_network = target_q_network
         self.target_q_network.set_weights(self.q_network.get_weights())
-        self.__compile(optimizer, loss_func,opt_metric)
+        self.__compile(optimizer, loss_func, opt_metric)
         self.memory = memory
         self.gamma = gamma
         self.target_update_freq = target_update_freq
@@ -90,11 +90,8 @@ class DoubleDQN:
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
         self.experiment_id = experiment_id
-        self.summary_writer=summary_writer
+        self.summary_writer = summary_writer
         self.itr = 0
-
-        #self.learning_type = learning_type
-
 
     def __compile(self, optimizer, loss_func, opt_metric):
         """Initialisation method, using the keras instance compile method. """
@@ -137,7 +134,7 @@ class DoubleDQN:
             self.memory.append(state, action, reward, nextstate)
 
         env.stop_simulation()
-        print("...Done")
+        print("...done filling replay memory")
 
     def update_network(self):
         """Helper method for train. Computes keras neural network updates using samples from memory.
@@ -212,7 +209,6 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
-
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
@@ -221,37 +217,38 @@ class DoubleDQN:
                 # Update network weights and record loss for Tensorboard
                 loss = self.update_network()
 
+                if self.summary_writer !=  None:
 
-                if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
-                    # create list of stats for Tensorboard, add scalars
-                    training_data = [tf.Summary.Value(tag = 'loss',
-                                                      simple_value = loss)]
-                                    #                   ,
-                                    # tf.Summary.Value(tag = 'Action 1',
-                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][0]),
-                                    # tf.Summary.Value(tag = 'Action 2',
-                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][1]),
-                                    # tf.Summary.Value(tag = 'Episode Length',
-                                    #                   simple_value = stats["episode_length"])]
+                    if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
+                        # create list of stats for Tensorboard, add scalars
+                        training_data = [tf.Summary.Value(tag = 'loss',
+                                                          simple_value = loss)]
+                                        #                   ,
+                                        # tf.Summary.Value(tag = 'Action 1',
+                                        #                   simple_value = self.q_network.layers[-1].get_weights()[1][0]),
+                                        # tf.Summary.Value(tag = 'Action 2',
+                                        #                   simple_value = self.q_network.layers[-1].get_weights()[1][1]),
+                                        # tf.Summary.Value(tag = 'Episode Length',
+                                        #                   simple_value = stats["episode_length"])]
 
-                    # add histogram of weights to list of stats for Tensorboard
-                    for index, layer in enumerate(self.q_network.layers):
+                        # add histogram of weights to list of stats for Tensorboard
+                        for index, layer in enumerate(self.q_network.layers):
 
-                        if index != len(self.q_network.layers) - 1:
-                            training_data.append(tf.Summary.Value(tag = str(layer.name) + " weights" ,
-                                                            histo = self.histo_summary(layer.get_weights()[0])))
-                            if len(layer.get_weights()) > 1:
-                                training_data.append(tf.Summary.Value(tag = str(layer.name) + " relu" ,
-                                                            histo = self.histo_summary(layer.get_weights()[1])))
+                            if index != len(self.q_network.layers) - 1:
+                                training_data.append(tf.Summary.Value(tag = str(layer.name) + " weights" ,
+                                                                histo = self.histo_summary(layer.get_weights()[0])))
+                                if len(layer.get_weights()) > 1:
+                                    training_data.append(tf.Summary.Value(tag = str(layer.name) + " relu" ,
+                                                                histo = self.histo_summary(layer.get_weights()[1])))
 
-                        else:
-                            training_data.append(tf.Summary.Value(tag = str(layer.name) + " output weights" ,
-                                                            histo = self.histo_summary(layer.get_weights()[0])))
-                            training_data.append(tf.Summary.Value(tag = "output values",
-                                                            histo = self.histo_summary(layer.get_weights()[1])))
+                            else:
+                                training_data.append(tf.Summary.Value(tag = str(layer.name) + " output weights" ,
+                                                                histo = self.histo_summary(layer.get_weights()[0])))
+                                training_data.append(tf.Summary.Value(tag = "output values",
+                                                                histo = self.histo_summary(layer.get_weights()[1])))
 
-                    # write the list of stats to the logdd
-                    self.summary_writer.add_summary(tf.Summary(value = training_data), global_step=self.itr)
+                        # write the list of stats to the logdd
+                        self.summary_writer.add_summary(tf.Summary(value = training_data), global_step=self.itr)
 
                 self.itr += 1
 
@@ -264,11 +261,14 @@ class DoubleDQN:
 
             mean_delay = tools.compute_mean_duration(self.output_dir)
 
-            episode_summary = [tf.Summary.Value(tag = 'reward',
-                                              simple_value = stats['total_reward']),
-                               tf.Summary.Value(tag = 'Average vehicle delay',
-                                              simple_value = mean_delay)]
-            self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
+            if self.summary_writer !=  None:
+
+                episode_summary = [tf.Summary.Value(tag = 'reward',
+                                                  simple_value = stats['total_reward']),
+                                   tf.Summary.Value(tag = 'Average vehicle delay',
+                                                  simple_value = mean_delay)]
+
+                self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
 
             self.trained_episodes += 1
 
@@ -307,7 +307,7 @@ class DoubleDQN:
             transition["q_values"] = self.q_network.predict(transition["next_state"])
             transition["action"] = env.action.select_action(policy, q_values = transition["q_values"], **kwargs)
             transition["state"], transition["reward"], transition["next_state"],done = env.step(transition["action"])
-            transition["it"] +=1
+            transition["it"] += 1
 
             all_trans.append(copy.deepcopy(transition))
 
@@ -316,6 +316,7 @@ class DoubleDQN:
         mean_duration = tools.compute_mean_duration(self.output_dir)
 
         return all_trans, mean_duration
+
 
     def histo_summary(self, values, bins=1000):
         """Helper function in train method. Log a histogram of the tensor of values for tensorboard.

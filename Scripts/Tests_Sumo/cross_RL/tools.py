@@ -5,7 +5,6 @@ import random
 import numpy as np
 import xml.etree.ElementTree as ET
 
-
 def get_output_folder(parent_dir, exp_id):
     """Return save folder parent_dir/Results/exp_id
 
