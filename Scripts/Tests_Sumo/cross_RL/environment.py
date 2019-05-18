@@ -67,11 +67,13 @@ class Env:
                  state_shape,
                  num_actions,
                  use_gui = False,
-                 delta_time=10):
+                 delta_time = 10,
+                 connection_label = "lonely_worker"):
         """Initialises object instance.
 
         Parameters
         ----------
+        connection: (str) name of sumo connection
         net_file : (str) SUMO .net.xml file
         route_file : (str) SUMO .rou.xml file
         state_shape : (np.array) 2-dimensional array specifying state space dimensions
@@ -84,6 +86,7 @@ class Env:
         self.use_gui = use_gui
         self.time_step = delta_time
         self.input_lanes = ["4i_0","2i_0","3i_0","1i_0"]
+        self.connection_label = connection_label
 
         if self.use_gui:
             self.sumo_binary = sumolib.checkBinary('sumo-gui')
@@ -109,13 +112,22 @@ class Env:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
 
+<<<<<<< HEAD
         # if self.use_gui:
         #     sumo_cmd.append('--start')
         traci.start(sumo_cmd)
         self.state.update_state()
+=======
+        if self.use_gui:
+            sumo_cmd.append('--start')
+        traci.start(sumo_cmd, label = self.connection_label)
+        # print('Started connection for worker #', self.connection_label)
+        self.connection = traci.getConnection(self.connection_label)
+        self.state.update_state(connection = self.connection)
+>>>>>>> 89b7f42966bc43f90dbc34352e625189c12f135e
 
 
-    def take_action(self,action):
+    def take_action(self, action):
         """Sets the action variable in sumo/traci to a new value.
 
         Parameters
@@ -124,13 +136,13 @@ class Env:
         """
 
         #action = 0 -> row vertically
-        if action == 0 and traci.trafficlight.getPhase("0") != 0:
-            traci.trafficlight.setPhase("0",3)
+        if action == 0 and self.connection.trafficlight.getPhase("0") != 0:
+            self.connection.trafficlight.setPhase("0",3)
             self.counter += self.state.get()[:,-2:]
             self.state.get()[:,-2:] = 0
         #action = 1 -> row horizontally
-        elif action == 1 and traci.trafficlight.getPhase("0") != 2:
-            traci.trafficlight.setPhase("0",1)
+        elif action == 1 and self.connection.trafficlight.getPhase("0") != 2:
+            self.connection.trafficlight.setPhase("0",1)
             self.counter += self.state.get()[:,-2:]
             self.state.get()[:,-2:] = 0
 
@@ -152,7 +164,7 @@ class Env:
     def compute_waiting_time(self):
         aux= []
         for lane in self.input_lanes:
-            aux.append(traci.lane.getWaitingTime(lane))
+            aux.append(self.connection.lane.getWaitingTime(lane))
         return np.array(aux)
 
     def step(self, action):
@@ -172,8 +184,8 @@ class Env:
         wt = self.compute_waiting_time()
 
         self.take_action(action)
-        traci.simulationStep(traci.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
-        self.state.update_state()
+        self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
+        self.state.update_state(connection = self.connection)
         next_state = self.state.get()
 
         wt_next = self.compute_waiting_time()
@@ -183,11 +195,12 @@ class Env:
 
     def done(self):
         """Calls sumo/traci to check whether there are still cars in the network"""
-        return traci.simulation.getMinExpectedNumber() == 0
+        return self.connection.simulation.getMinExpectedNumber() == 0
 
     def stop_simulation(self):
         """Closes the sumo/traci connection"""
-        traci.close()
+        self.connection.close()
+        # print('Stopped connection for worker #', self.connection_label)
 
 class Observation:
     """
@@ -211,7 +224,7 @@ class Observation:
         returns reward, computed from current state
     """
 
-    def __init__(self, shape,lanes):
+    def __init__(self, shape, lanes):
         """
         Parameters
         ----------
@@ -221,7 +234,7 @@ class Observation:
         self.obs = np.zeros(shape)
         self.lanes = lanes
 
-    def update_state(self):
+    def update_state(self, connection):
         """
         Parameters
         ----------
@@ -231,16 +244,21 @@ class Observation:
 
         for i,lane in enumerate(self.lanes):
 
+<<<<<<< HEAD
             self.obs[:,i] = traci.lane.getLastStepOccupancy(lane) # Occupancy
             self.obs[:,i+4] = traci.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
+=======
+            self.obs[:,i] = connection.lane.getLastStepHaltingNumber(lane) # Occupancy
+            self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane) # Average speed
+>>>>>>> 89b7f42966bc43f90dbc34352e625189c12f135e
 
-        self.obs[:,8] = traci.trafficlight.getPhase("0") # Traffic light phase
+        self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
             # Amount of time phase 0 (vertical row) has been on since last phase change
-            self.obs[:,9] = traci.trafficlight.getPhaseDuration("0") - (traci.trafficlight.getNextSwitch("0") - traci.simulation.getTime())
+            self.obs[:,9] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
         elif self.obs[:,8] == 2:
             # Amount of time phase 2 (horizontal row) has been on since last phase change
-            self.obs[:,10] = traci.trafficlight.getPhaseDuration("0") - (traci.trafficlight.getNextSwitch("0") - traci.simulation.getTime())
+            self.obs[:,10] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
 
     def get(self):
         """Returns state vector"""

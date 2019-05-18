@@ -6,7 +6,7 @@ from keras.layers import Dense, Flatten
 
 
 # More ANN arquitectures to be specified here
-def get_model(model_name, *args):
+def get_model(model_name, **kwargs):
     """Helper function to instantiate q-networks.
 
     Parameters
@@ -15,9 +15,9 @@ def get_model(model_name, *args):
     *args : arguments to be passed onto helper functions
     """
     if model_name == 'linear':
-        return linear(*args)
+        return linear(**kwargs)
     elif model_name == 'simple':
-        return simple(*args)
+        return simple(**kwargs)
 
 
 def linear(input_shape, num_actions):
