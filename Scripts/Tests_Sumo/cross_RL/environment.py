@@ -109,8 +109,8 @@ class Env:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
 
-        if self.use_gui:
-            sumo_cmd.append('--start')
+        # if self.use_gui:
+        #     sumo_cmd.append('--start')
         traci.start(sumo_cmd)
         self.state.update_state()
 
@@ -147,7 +147,7 @@ class Env:
         # b = np.round(state,decimals=1)
         # aux = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
 
-        return -np.sum(diff) # delta waiting time in the network
+        return np.sign(-np.sum(diff)) # delta waiting time in the network
 
     def compute_waiting_time(self):
         aux= []
@@ -231,8 +231,8 @@ class Observation:
 
         for i,lane in enumerate(self.lanes):
 
-            self.obs[:,i] = traci.lane.getLastStepHaltingNumber(lane) # Occupancy
-            self.obs[:,i+4] = traci.lane.getLastStepMeanSpeed(lane) # Average speed
+            self.obs[:,i] = traci.lane.getLastStepOccupancy(lane) # Occupancy
+            self.obs[:,i+4] = traci.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
 
         self.obs[:,8] = traci.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
@@ -296,6 +296,10 @@ class Action:
             return self.select_epsgreedy(q_values, **kwargs)
         elif policy == "fixed":
             return self.select_fixed(q_values, **kwargs) #q values not used
+        elif policy == "linDecEpsGreedy":
+            return self.select_discepsgreedy(q_values, **kwargs)
+
+
 
     def select_rand(self, q_values):
         """Feeds into select_greedy or directly into select_action method.
@@ -325,7 +329,7 @@ class Action:
         q_values : (np.array) predicted q-values
         """
 
-        if np.random.uniform() < eps:
+        if np.random.uniform() > eps:
             return self.select_rand(q_values)
         else:
             return self.select_greedy(q_values)
@@ -342,5 +346,12 @@ class Action:
         elif env.state.get()[:,10] > h_row_t:
             return 0
 
-    def select_discepsgreedy(self, q_values, eps, itr):
-        pass
+    def select_discepsgreedy(self, q_values, itr, start_eps = 1, final_eps = 0.05, total_it = 100000):
+        """ eps-greedy policy with the eps decreasing linearly from start_eps to
+            final_eps over total_it steps.
+        """
+        if itr < total_it:
+            eps = (total_it - itr) / total_it * (start_eps - final_eps) + final_eps
+        else :
+            eps = final_eps
+        return self.select_epsgreedy(q_values , eps)

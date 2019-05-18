@@ -28,9 +28,9 @@ def linear(input_shape, num_actions):
     input_shape : (np.array) shape of the state vector to be fed into the model as input layer
     num_actions : (int) number of nodes of the output layer
     """
-    model = Sequential
-    model.add(Flatten(input_shape=input_shape, name="Layer_1")) # If a vector the flattening does not have any effect. (only matrices)
-    model.add(Dense(num_actions,activation=None, name = "Output"))
+    model = Sequential()
+    #model.add(Flatten(input_shape=input_shape, name="Layer_1")) # If a vector the flattening does not have any effect. (only matrices)
+    model.add(Dense(num_actions, input_shape=input_shape, activation=None, name = "Output"))
     return model
 
 

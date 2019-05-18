@@ -52,7 +52,7 @@ class ReplayMemory():
         self.cur_size = 0
 
 
-    def append(self, state, action, reward, nextstate):
+    def append(self, state, action, reward, nextstate, done):
         """Adds new elements to the four lists, handles index counter.
 
         Parameters
@@ -63,7 +63,7 @@ class ReplayMemory():
         nextstate : (np.array) all state variables for one observation, after action taken
         """
 
-        self.memory[self.itr].assign(state, action, reward, nextstate)
+        self.memory[self.itr].assign(state, action, reward, nextstate, done)
         self.itr += 1
         self.cur_size = min(self.cur_size + 1, self.max_size)
         self.itr %= self.max_size
@@ -77,14 +77,15 @@ class ReplayMemory():
         batch_size : (int) size of the batch to be sampled
         """
 
-        states, actions, rewards, next_states = [],[],[],[]
+        states, actions, rewards, next_states, dones = [],[],[],[], []
         for i, idx in enumerate(np.random.randint(0, self.cur_size, size=batch_size)):
             transition = self.memory[idx]
             states.append(transition.state)
             actions.append(transition.action)
             rewards.append(transition.reward)
             next_states.append(transition.nextstate)
-        return np.vstack(states), actions, rewards, np.vstack(next_states)
+            dones.append(transition.done)
+        return np.vstack(states), actions, rewards, np.vstack(next_states), dones
 
 
     def print_obs(self,obs):
@@ -136,9 +137,10 @@ class SingleSample():
         self.action = 0
         self.reward = 0
         self.nextstate = np.zeros(state_shape)
+        self.done = False
 
 
-    def assign(self, state, action, reward, nextstate):
+    def assign(self, state, action, reward, nextstate, done):
         """Assigns new values to attributes.
 
         Parameters
@@ -153,6 +155,7 @@ class SingleSample():
         self.action = action
         self.reward = reward
         self.nextstate[:] = nextstate
+        self.done = done
 
 
     def print_obs(self):
@@ -161,4 +164,5 @@ class SingleSample():
         print( "State: \n\n",self.state,
                "\n\nAction:\n\n",self.action,
                "\n\nReward:\n\n",self.reward,
-               "\n\nNext State:\n\n",self.nextstate)
+               "\n\nNext State:\n\n",self.nextstate,
+               "\n\nSimulation finished?:\n\n",self.done)

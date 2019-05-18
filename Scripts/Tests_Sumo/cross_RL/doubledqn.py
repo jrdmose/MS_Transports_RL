@@ -8,6 +8,7 @@ import random
 import numpy as np
 import tensorflow as tf
 import copy
+import keras.backend as K
 
 SAVE_AFTER = 11000 # Save model checkpoint
 STORE_LOGS_AFTER = 100 # Store tensorflow logs after STORE_LOGS_AFTER iterations
@@ -23,6 +24,8 @@ class DoubleDQN:
     memory : memory instance - needs to be instantiated first # should this be instantiated here?
     gamma : (int) discount factor for rewards
     target_update_freq : (int) defines after how many steps the q-network should be re-trained
+    train_freq: (int) How often you actually update your Q-Network. Sometimes stability is improved
+        if you collect a couple samples for your replay memory, for every Q-network update that you run.
     num_burn_in : (int) defines the size of the replay memory to be filled before, using a specified policy
     batch_size : (int) size of batches to be used to train models
     trained_episodes : (int) episode counter
@@ -59,6 +62,7 @@ class DoubleDQN:
                  memory,
                  gamma,
                  target_update_freq,
+                 train_freq,
                  num_burn_in,
                  batch_size,
                  optimizer,
@@ -91,9 +95,8 @@ class DoubleDQN:
         self.output_dir = output_dir
         self.experiment_id = experiment_id
         self.summary_writer=summary_writer
+        self.train_freq =train_freq
         self.itr = 0
-
-        #self.learning_type = learning_type
 
 
     def __compile(self, optimizer, loss_func, opt_metric):
@@ -134,7 +137,12 @@ class DoubleDQN:
         for i in range(self.num_burn_in):
             action = env.action.select_action('rand')
             state, reward, nextstate, done = env.step(action)
-            self.memory.append(state, action, reward, nextstate)
+            self.memory.append(state, action, reward, nextstate, done)
+            # If episode finished, continue with another episode
+            if done:
+                print("Episode finished during memory replay fill. Starting new episode...")
+                env.start_simulation(self.output_dir)
+                self.warm_up_net( env, WARM_UP_NET)
 
         env.stop_simulation()
         print("...Done")
@@ -147,21 +155,33 @@ class DoubleDQN:
         (weights not being updated due to these actions)
         """
         # Sample mini batch
-        states_m, actions_m, rewards_m, states_m_p = self.memory.sample(self.batch_size)
+        states_m, actions_m, rewards_m, states_m_p, done_m = self.memory.sample(self.batch_size)
 
+        # randomly swap the target and active networks
+        # if np.random.uniform() < 0.5:
+        #     import pdb; pdb.set_trace()
+        #     temp = self.q_network
+        #     self.q_network = self.target_q_network
+        #     self.target_q_network = temp
+
+        #import pdb; pdb.set_trace()
         # attach q-values to states
         target_batch = self.q_network.predict(states_m)
-        target_q = self.target_q_network.predict(states_m_p)
+        next_state_q = self.target_q_network.predict(states_m_p)
 
-        # choose action
-        selected_actions = np.argmax(target_q, axis=1)
+        # Predict q values for updated network on s' and choose action according to online network (q_network)
+        next_q_online_network = self.q_network.predict(states_m_p)
+        selected_actions = np.argmax(next_q_online_network, axis=1)
 
         # update q-values
         for i, action in enumerate(selected_actions):
-            target_batch[i, action] =  rewards_m[i] + self.gamma * target_q[i, action]
+            if done_m[i]:
+                target_batch[i,action] = rewards_m[i]
+            else:
+                target_batch[i, action] =  rewards_m[i] + self.gamma * next_state_q[i, action]
 
         # keras method to train on batch that returns loss
-        loss = self.q_network.train_on_batch(states_m, target_batch)
+        fit = self.q_network.fit(states_m, target_batch, batch_size = self.batch_size, verbose = 0)
 
         # get weights
         weights = self.q_network.get_weights()
@@ -174,7 +194,7 @@ class DoubleDQN:
         if self.output_dir and self.itr % SAVE_AFTER == 0:
             self.save()
 
-        return loss
+        return fit.history["loss"][0]
 
     def train(self, env, num_episodes, policy, **kwargs):
         """Main method for the agent. Trains the keras neural network instances, calls all other helper methods.
@@ -189,6 +209,8 @@ class DoubleDQN:
         all_stats = []
         all_rewards = []
         start_train_ep = self.trained_episodes
+
+
 
         for i in range(num_episodes):
             # print progress of training
@@ -212,27 +234,28 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
+                if policy == "linDecEpsGreedy":
+                    kwargs["itr"] = self.itr
 
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
-                self.memory.append(state, action, reward, nextstate)
+                self.memory.append(state, action, reward, nextstate, done)
 
                 # Update network weights and record loss for Tensorboard
-                loss = self.update_network()
+
+                if self.itr % self.train_freq == 0:
+                    loss = self.update_network()
 
 
                 if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
                     # create list of stats for Tensorboard, add scalars
-                    training_data = [tf.Summary.Value(tag = 'loss',
+
+
+                    training_data = [tf.Summary.Value(tag = 'TD - loss',
                                                       simple_value = loss)]
-                                    #                   ,
-                                    # tf.Summary.Value(tag = 'Action 1',
-                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][0]),
-                                    # tf.Summary.Value(tag = 'Action 2',
-                                    #                   simple_value = self.q_network.layers[-1].get_weights()[1][1]),
-                                    # tf.Summary.Value(tag = 'Episode Length',
-                                    #                   simple_value = stats["episode_length"])]
+                                    #  tf.Summary.Value(tag = 'learning rate',
+                                    #                  simple_value = K.eval(self.q_network.optimizer.lr))]
 
                     # add histogram of weights to list of stats for Tensorboard
                     for index, layer in enumerate(self.q_network.layers):
@@ -261,15 +284,18 @@ class DoubleDQN:
                 stats['max_q_value'] += max(q_values)
 
             env.stop_simulation()
-
             mean_delay = tools.compute_mean_duration(self.output_dir)
+            # Static policy evaluation for comparison during training
+            #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
             episode_summary = [tf.Summary.Value(tag = 'reward',
                                               simple_value = stats['total_reward']),
                                tf.Summary.Value(tag = 'Average vehicle delay',
                                               simple_value = mean_delay)]
-            self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
 
+                               #tf.Summary.Value(tag = 'Average vehicle delay static',
+                               #                  simple_value = static_dur)]
+            self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
             self.trained_episodes += 1
 
 
@@ -302,6 +328,10 @@ class DoubleDQN:
         if policy == 'fixed':
             kwargs["env"] = env
 
+        if policy == "linDecEpsGreedy":
+            kwargs["itr"] = self.itr
+
+
         while not done and it < self.max_ep_len:
             #import pdb; pdb.set_trace()
             transition["q_values"] = self.q_network.predict(transition["next_state"])
@@ -317,7 +347,7 @@ class DoubleDQN:
 
         return all_trans, mean_duration
 
-    def histo_summary(self, values, bins=1000):
+    def histo_summary(self, values, bins=100):
         """Helper function in train method. Log a histogram of the tensor of values for tensorboard.
 
         Creates a HistogramProto instance that can be fed into Tensorboard.
