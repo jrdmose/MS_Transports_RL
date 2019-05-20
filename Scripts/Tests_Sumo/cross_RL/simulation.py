@@ -3,8 +3,10 @@ import environment
 import doubledqn
 import tools
 import memory
+import os
 
 import tensorflow as tf
+from keras import optimizers
 
 class simulator:
     """Wrapper that handles all objects needed for a simulation:
@@ -67,27 +69,28 @@ class simulator:
                  connection_label = "lonely_worker",
                  q_network_type = 'simple',
                  target_q_network_type = 'simple',
-                 gamma = 0.9,
+                 gamma = 0.99,
                  target_update_freq = 10000,
-                 num_burn_in = 1000,
-                 batch_size = 50,
-                 optimizer = 'adam',
+                 train_freq = 3,
+                 num_burn_in = 300,
+                 batch_size = 32,
+                 optimizer = optimizers.RMSprop(lr=0.001, rho=0.95),
                  loss_func = "mse",
-                 max_ep_length = 10000,
-                 experiment_id = "Log 1",
+                 max_ep_length = 1000,
+                 experiment_id = "Exp_1",
                  model_checkpoint = True,
                  opt_metric = None,
                  # environment parameters
-                 net_file = "cross.net.xml",
-                 route_file = "cross.rou.xml",
+                 net_file = "./network/cross.net.xml",
+                 route_file = "./network/cross.rou.xml",
                  state_shape = (1,11),
                  num_actions = 2,
                  use_gui = False,
                  delta_time = 10,
                  # memory parameters
-                 max_size = 5000,
+                 max_size = 100000,
                  # additional parameters
-                 policy = "epsGreedy",
+                 policy = "linDecEpsGreedy",
                  eps = 0.1,
                  num_episodes = 2,
                  monitoring = False):
@@ -98,6 +101,7 @@ class simulator:
         self.target_q_network_type = target_q_network_type
         self.gamma = gamma
         self.target_update_freq = target_update_freq
+        self.train_freq = train_freq
         self.num_burn_in = num_burn_in
         self.batch_size = batch_size
         self.optimizer = optimizer
@@ -124,11 +128,16 @@ class simulator:
         self.eps = eps
         self.num_episodes = num_episodes
         self.monitoring = monitoring
-        self.output_dir = tools.get_output_folder("./Logs", self.experiment_id)
+
 
         if self.monitoring:
+
+            self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
             self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
+            self.route_file = os.path.join(self.output_dir,self.route_file  )
+
         else:
+            self.output_dir = None
             self.summary_writer = None
 
         # Initialize Q-networks (value and target)
@@ -159,6 +168,7 @@ class simulator:
                                 memory = self.memory,
                                 gamma = self.gamma,
                                 target_update_freq = self.target_update_freq,
+                                train_freq = self.train_freq,
                                 num_burn_in = self.num_burn_in,
                                 batch_size = self.batch_size,
                                 optimizer = self.optimizer,
@@ -170,25 +180,29 @@ class simulator:
                                 summary_writer = self.summary_writer)
 
         # Fill memory
+
+
+    def train(self, num_episodes):
         self.ddqn.fill_replay(self.env)
-
         self.ddqn.train(env = self.env,
-                        num_episodes = self.num_episodes,
+                        num_episodes = num_episodes,
                         policy = self.policy,
-                        eps = self.eps)
+                        connection_label = self.connection_label)
 
+    def load(self,checkpoint_dir):
+        self.ddqn.load(checkpoint_dir)
 
     def evaluate(self,
-        cv = 5):
+                 runs = 5,
+                 use_gui = False):
         """Tests the performance of the agent"""
 
-        mean_duration_cv = []
+        self.env.render(use_gui)
 
-        for i in range(cv):
-            all_trans, mean_duration = self.ddqn.evaluate(
-                env = self.env,
-                policy = self.policy,
-                eps = self.eps)
-            mean_duration_cv.append(mean_duration)
+        mean_durations = []
+        for i in range(runs):
+            all_trans, mean_duration = self.ddqn.evaluate(env = self.env,
+                                                        policy = "greedy")
+            mean_durations.append(mean_duration)
 
-        return sum(mean_duration_cv)/cv
+        return sum(mean_durations)/runs

@@ -88,10 +88,7 @@ class Env:
         self.input_lanes = ["4i_0","2i_0","3i_0","1i_0"]
         self.connection_label = connection_label
 
-        if self.use_gui:
-            self.sumo_binary = sumolib.checkBinary('sumo-gui')
-        else:
-            self.sumo_binary = sumolib.checkBinary('sumo')
+        self.render(self.use_gui)
 
         self.state = Observation(state_shape, self.input_lanes)
 
@@ -112,20 +109,18 @@ class Env:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
 
-<<<<<<< HEAD
         # if self.use_gui:
         #     sumo_cmd.append('--start')
-        traci.start(sumo_cmd)
-        self.state.update_state()
-=======
-        if self.use_gui:
-            sumo_cmd.append('--start')
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)
         self.state.update_state(connection = self.connection)
->>>>>>> 89b7f42966bc43f90dbc34352e625189c12f135e
 
+    def render(self,use_gui):
+        if use_gui:
+            self.sumo_binary = sumolib.checkBinary('sumo-gui')
+        else:
+            self.sumo_binary = sumolib.checkBinary('sumo')
 
     def take_action(self, action):
         """Sets the action variable in sumo/traci to a new value.
@@ -243,14 +238,8 @@ class Observation:
         """
 
         for i,lane in enumerate(self.lanes):
-
-<<<<<<< HEAD
             self.obs[:,i] = traci.lane.getLastStepOccupancy(lane) # Occupancy
             self.obs[:,i+4] = traci.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
-=======
-            self.obs[:,i] = connection.lane.getLastStepHaltingNumber(lane) # Occupancy
-            self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane) # Average speed
->>>>>>> 89b7f42966bc43f90dbc34352e625189c12f135e
 
         self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
