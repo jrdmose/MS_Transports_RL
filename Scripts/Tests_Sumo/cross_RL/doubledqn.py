@@ -99,7 +99,7 @@ class DoubleDQN:
         self.monitoring = monitoring
         self.experiment_id = experiment_id
         self.summary_writer = summary_writer
-        self.train_freq =train_freq
+        self.train_freq = train_freq
         self.itr = 0
 
 
@@ -133,7 +133,7 @@ class DoubleDQN:
         policy : (str) policy to be used to fill memory
         """
 
-        print("Filling experience replay memory...")
+        # print("Filling experience replay memory...")
 
         tools.generate_routefile(self.route_file)
         env.start_simulation(self.output_dir)
@@ -150,7 +150,7 @@ class DoubleDQN:
                 self.warm_up_net( env, WARM_UP_NET)
 
         env.stop_simulation()
-        print("...done filling replay memory")
+        # print("...done filling replay memory")
 
     def update_network(self):
         """Helper method for train. Computes keras neural network updates using samples from memory.
@@ -296,7 +296,7 @@ class DoubleDQN:
             if self.monitoring:
                 mean_delay = tools.compute_mean_duration(self.output_dir)
 
-                episode_summary = [tf.Summary.Value(tag = 'reward',
+                episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',
                                                   simple_value = mean_delay)]
