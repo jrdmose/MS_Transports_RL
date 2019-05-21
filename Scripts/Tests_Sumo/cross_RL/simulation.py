@@ -84,6 +84,7 @@ class simulator:
                  net_file = "cross.net.xml",
                  route_file = "cross.rou.xml",
                  network_dir = "./network",
+                 demand = "nominal",
                  state_shape = (1,11),
                  num_actions = 2,
                  use_gui = False,
@@ -123,6 +124,7 @@ class simulator:
         # environment parameters
         self.net_file = os.path.join(network_dir, net_file)
         self.route_file = os.path.join(self.output_dir, route_file)
+        self.demand = demand
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.use_gui = use_gui
@@ -145,6 +147,7 @@ class simulator:
         self.env =  environment.Env(connection_label = self.connection_label,
                                 net_file = self.net_file,
                                 route_file = self.route_file,
+                                demand =  self.demand,
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
                                 use_gui = self.use_gui)
@@ -168,7 +171,6 @@ class simulator:
                                 max_ep_length = self.max_ep_length,
                                 env_name = self.env,
                                 output_dir = self.output_dir,
-                                route_file = self.route_file,
                                 monitoring = self.monitoring,
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)

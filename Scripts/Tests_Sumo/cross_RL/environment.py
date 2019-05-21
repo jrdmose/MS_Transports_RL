@@ -3,6 +3,7 @@
 
 import copy
 import numpy as np
+import tools
 
 import time
 import os, sys
@@ -13,8 +14,8 @@ import tensorflow as tf
 
 # Making sure path to SUMO bins correctly specified
 if 'SUMO_HOME' in os.environ:
-    tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
-    sys.path.append(tools)
+    tools_sumo = os.path.join(os.environ['SUMO_HOME'], 'tools')
+    sys.path.append(tools_sumo)
 else:
     sys.exit("please declare environment variable 'SUMO_HOME'")
 
@@ -23,7 +24,7 @@ import traci
 
 # ENVIRONMENT CLASS
 ##################################
-
+WARM_UP_NET = 20 # Number of simu steps to warm up the network
 
 class Env:
     """Main class to manage environment. Supplies the environment responses to actions taken.
@@ -64,6 +65,7 @@ class Env:
     def __init__(self,
                  net_file,
                  route_file,
+                 demand,
                  state_shape,
                  num_actions,
                  use_gui = False,
@@ -84,6 +86,7 @@ class Env:
         self.net = net_file
         self.route = route_file
         self.use_gui = use_gui
+        self.demand = demand
         self.time_step = delta_time
         self.input_lanes = ["4i_0","2i_0","3i_0","1i_0"]
         self.connection_label = connection_label
@@ -91,15 +94,29 @@ class Env:
         self.render(self.use_gui)
 
         self.state = Observation(state_shape, self.input_lanes)
-
         self.action = Action(num_actions)
         self.counter = np.zeros((1,2))
+
+    def warm_up_net(self, num_it):
+        """ Runs the environment for some iterations to fill the network.
+        The network is filled with a static policy
+
+        Parameters
+        ----------
+
+        num_it =  number of simulation steps to run
+        """
+
+        for i in range(num_it):
+            action = self.action.select_action("fixed", state = self.state, v_row_t = 15, h_row_t = 40)
+            self.step(action)
 
 
     def start_simulation(self, parent_dir = None ):
         """Opens a connection to sumo/traci [with or without GUI] and
         updates obs atribute  (the current state of the environment).
         """
+        tools.generate_routefile(route_file_dir = self.route, demand = self.demand)
 
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
@@ -108,12 +125,11 @@ class Env:
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
-        # import pdb; pdb.set_trace()
-        # if self.use_gui:
-        #     sumo_cmd.append('--start')
+
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)
+        self.warm_up_net(WARM_UP_NET)
         self.state.update_state(connection = self.connection)
 
     def render(self,use_gui):
@@ -306,8 +322,6 @@ class Action:
         elif policy == "linDecEpsGreedy":
             return self.select_discepsgreedy(q_values, **kwargs)
 
-
-
     def select_rand(self, q_values):
         """Feeds into select_greedy or directly into select_action method.
         Selects one of the actions randomly."""
@@ -341,16 +355,16 @@ class Action:
         else:
             return self.select_greedy(q_values)
 
-    def select_fixed(self, q_values,env, v_row_t, h_row_t):
+    def select_fixed(self, q_values, state, v_row_t, h_row_t):
         """ Feeds into select_action method.
         It gives right of way horizontally h_row_t seconds.
         It gives right of way vertically v_row_t seconds.
         """
         #Vertical row
-        if env.state.get()[:,9] > v_row_t:
+        if state.get()[:,9] > v_row_t:
             return 1
         #Horizontal row
-        elif env.state.get()[:,10] > h_row_t:
+        elif state.get()[:,10] > h_row_t:
             return 0
 
     def select_discepsgreedy(self, q_values, itr, start_eps = 1, final_eps = 0.05, total_it = 100000):
