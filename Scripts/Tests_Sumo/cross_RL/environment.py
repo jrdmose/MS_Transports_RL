@@ -113,6 +113,7 @@ class Env:
         #     sumo_cmd.append('--start')
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
+        import pdb; pdb.set_trace()
         self.connection = traci.getConnection(self.connection_label)
         self.state.update_state(connection = self.connection)
 

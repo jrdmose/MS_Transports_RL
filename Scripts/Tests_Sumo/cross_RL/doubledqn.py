@@ -70,6 +70,7 @@ class DoubleDQN:
                  max_ep_length,
                  env_name,
                  output_dir,
+                 monitoring,
                  experiment_id,
                  summary_writer,
                  model_checkpoint = True,
@@ -93,6 +94,7 @@ class DoubleDQN:
         self.trained_episodes = 0
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
+        self.monitoring = monitoring
         self.experiment_id = experiment_id
         self.summary_writer=summary_writer
         self.train_freq =train_freq
@@ -133,7 +135,7 @@ class DoubleDQN:
 
         tools.generate_routefile(self.output_dir)
         env.start_simulation(self.output_dir)
-        self.warm_up_net( env, WARM_UP_NET)
+        self.warm_up_net(env, WARM_UP_NET)
 
         for i in range(self.num_burn_in):
             action = env.action.select_action('rand')
@@ -251,7 +253,7 @@ class DoubleDQN:
                     loss = self.update_network()
 
 
-                if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
+                if self.monitoring and self.itr % STORE_LOGS_AFTER == 0:
                     # create list of stats for Tensorboard, add scalars
 
 
@@ -291,7 +293,7 @@ class DoubleDQN:
             # Static policy evaluation for comparison during training
             #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
-            if self.output_dir:
+            if self.monitoring:
                 mean_delay = tools.compute_mean_duration(self.output_dir)
 
                 episode_summary = [tf.Summary.Value(tag = 'reward',
@@ -348,7 +350,6 @@ class DoubleDQN:
             all_trans.append(copy.deepcopy(transition))
 
         env.stop_simulation()
-
         mean_duration = tools.compute_mean_duration(self.output_dir)
 
         return all_trans, mean_duration
