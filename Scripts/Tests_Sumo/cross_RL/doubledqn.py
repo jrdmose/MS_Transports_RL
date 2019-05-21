@@ -70,6 +70,8 @@ class DoubleDQN:
                  max_ep_length,
                  env_name,
                  output_dir,
+                 route_file,
+                 monitoring,
                  experiment_id,
                  summary_writer,
                  model_checkpoint = True,
@@ -93,9 +95,11 @@ class DoubleDQN:
         self.trained_episodes = 0
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
+        self.route_file = route_file
+        self.monitoring = monitoring
         self.experiment_id = experiment_id
-        self.summary_writer=summary_writer
-        self.train_freq =train_freq
+        self.summary_writer = summary_writer
+        self.train_freq = train_freq
         self.itr = 0
 
 
@@ -129,11 +133,11 @@ class DoubleDQN:
         policy : (str) policy to be used to fill memory
         """
 
-        #print("Filling experience replay memory...")
+        # print("Filling experience replay memory...")
 
-        tools.generate_routefile(self.output_dir)
+        tools.generate_routefile(self.route_file)
         env.start_simulation(self.output_dir)
-        self.warm_up_net( env, WARM_UP_NET)
+        self.warm_up_net(env, WARM_UP_NET)
 
         for i in range(self.num_burn_in):
             action = env.action.select_action('rand')
@@ -146,7 +150,7 @@ class DoubleDQN:
                 self.warm_up_net( env, WARM_UP_NET)
 
         env.stop_simulation()
-        #print("...done filling replay memory")
+        # print("...done filling replay memory")
 
     def update_network(self):
         """Helper method for train. Computes keras neural network updates using samples from memory.
@@ -211,8 +215,6 @@ class DoubleDQN:
         all_rewards = []
         start_train_ep = self.trained_episodes
 
-
-
         for i in range(num_episodes):
             # print progress of training
             if self.trained_episodes % 10 == 0:
@@ -221,7 +223,7 @@ class DoubleDQN:
                                                             start_train_ep + num_episodes))
 
             # Each time an episode is run need to create a new random routing
-            tools.generate_routefile(self.output_dir)
+            tools.generate_routefile(self.route_file)
             env.start_simulation(self.output_dir)
             self.warm_up_net( env, WARM_UP_NET)
 
@@ -251,7 +253,7 @@ class DoubleDQN:
                     loss = self.update_network()
 
 
-                if self.output_dir and self.itr % STORE_LOGS_AFTER == 0:
+                if self.monitoring and self.itr % STORE_LOGS_AFTER == 0:
                     # create list of stats for Tensorboard, add scalars
 
 
@@ -291,10 +293,10 @@ class DoubleDQN:
             # Static policy evaluation for comparison during training
             #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
-            if self.output_dir:
+            if self.monitoring:
                 mean_delay = tools.compute_mean_duration(self.output_dir)
 
-                episode_summary = [tf.Summary.Value(tag = 'reward',
+                episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',
                                                   simple_value = mean_delay)]
@@ -348,7 +350,6 @@ class DoubleDQN:
             all_trans.append(copy.deepcopy(transition))
 
         env.stop_simulation()
-
         mean_duration = tools.compute_mean_duration(self.output_dir)
 
         return all_trans, mean_duration

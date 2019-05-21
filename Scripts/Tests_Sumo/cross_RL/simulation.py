@@ -81,8 +81,9 @@ class simulator:
                  model_checkpoint = True,
                  opt_metric = None,
                  # environment parameters
-                 net_file = "./network/cross.net.xml",
-                 route_file = "./network/cross.rou.xml",
+                 net_file = "cross.net.xml",
+                 route_file = "cross.rou.xml",
+                 network_dir = "./network",
                  state_shape = (1,11),
                  num_actions = 2,
                  use_gui = False,
@@ -111,9 +112,17 @@ class simulator:
         self.model_checkpoint = model_checkpoint
         self.opt_metric = opt_metric
 
+        # additional parameters
+        self.policy = policy
+        self.eps = eps
+        self.num_episodes = num_episodes
+        self.monitoring = monitoring
+        self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
+        self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
+
         # environment parameters
-        self.net_file = net_file
-        self.route_file = route_file
+        self.net_file = os.path.join(network_dir, net_file)
+        self.route_file = os.path.join(self.output_dir, route_file)
         self.state_shape = state_shape
         self.num_actions = num_actions
         self.use_gui = use_gui
@@ -122,23 +131,6 @@ class simulator:
         # memory parameters
         self.max_size = max_size
         self.state_shape = state_shape
-
-        # additional parameters
-        self.policy = policy
-        self.eps = eps
-        self.num_episodes = num_episodes
-        self.monitoring = monitoring
-
-
-        if self.monitoring:
-
-            self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
-            self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
-            self.route_file = os.path.join(self.output_dir,self.route_file  )
-
-        else:
-            self.output_dir = None
-            self.summary_writer = None
 
         # Initialize Q-networks (value and target)
         self.q_network = agent.get_model(model_name = self.q_network_type,
@@ -152,7 +144,7 @@ class simulator:
         # Initialize environment
         self.env =  environment.Env(connection_label = self.connection_label,
                                 net_file = self.net_file,
-                                route_file =self.route_file,
+                                route_file = self.route_file,
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
                                 use_gui = self.use_gui)
@@ -176,16 +168,16 @@ class simulator:
                                 max_ep_length = self.max_ep_length,
                                 env_name = self.env,
                                 output_dir = self.output_dir,
+                                route_file = self.route_file,
+                                monitoring = self.monitoring,
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)
 
-        # Fill memory
 
-
-    def train(self, num_episodes):
+    def train(self):
         self.ddqn.fill_replay(self.env)
         self.ddqn.train(env = self.env,
-                        num_episodes = num_episodes,
+                        num_episodes = self.num_episodes,
                         policy = self.policy,
                         connection_label = self.connection_label)
 

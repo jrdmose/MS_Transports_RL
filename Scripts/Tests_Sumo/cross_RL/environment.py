@@ -108,7 +108,7 @@ class Env:
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
-
+        # import pdb; pdb.set_trace()
         # if self.use_gui:
         #     sumo_cmd.append('--start')
         traci.start(sumo_cmd, label = self.connection_label)
