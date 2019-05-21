@@ -46,3 +46,10 @@ Installing required packages
 ```
 pip3 install numpy tensorflow keras
 ```
+**Tensorboard set-up**
+
+Define the path of the logs
+
+```
+tensorboard --logdir ./logs
+```
