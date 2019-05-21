@@ -21,7 +21,7 @@ Supervisors: Hrvoje Stojic and Anestis Papanikolaou
 
 **Option 1**
 
-Run setup.sh 
+Run setup.sh
 
 ```
 bash setup.sh
@@ -32,7 +32,7 @@ bash setup.sh
 Install sumo binaries
 
 ```
-sudo apt-get install sumo sumo-tools sumo-doc 
+sudo apt-get install sumo sumo-tools sumo-doc
 ```
 
 Set SUMO_HOME variable (default sumo installation path is /usr/share/sumo)
@@ -45,4 +45,14 @@ Installing required packages
 
 ```
 pip3 install numpy tensorflow keras
+```
+
+### Running tensorboard
+In terminal, run:
+```
+tensorboard --logdir ./Scripts/Tests_Sumo/cross_RL/Logs/[name of experiment]
+```
+Then open a browser and enter:
+```
+http://localhost:6006/
 ```
