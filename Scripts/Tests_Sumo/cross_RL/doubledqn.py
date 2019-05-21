@@ -96,7 +96,7 @@ class DoubleDQN:
         self.output_dir = output_dir
         self.monitoring = monitoring
         self.experiment_id = experiment_id
-        self.summary_writer=summary_writer
+        self.summary_writer = summary_writer
         self.train_freq =train_freq
         self.itr = 0
 
