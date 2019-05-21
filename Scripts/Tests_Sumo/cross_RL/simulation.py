@@ -128,16 +128,15 @@ class simulator:
         self.eps = eps
         self.num_episodes = num_episodes
         self.monitoring = monitoring
+        self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
 
 
         if self.monitoring:
 
-            self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
             self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
-            self.route_file = os.path.join(self.output_dir,self.route_file  )
+            self.route_file = os.path.join(self.output_dir, self.route_file  )
 
         else:
-            self.output_dir = None
             self.summary_writer = None
 
         # Initialize Q-networks (value and target)
@@ -176,6 +175,7 @@ class simulator:
                                 max_ep_length = self.max_ep_length,
                                 env_name = self.env,
                                 output_dir = self.output_dir,
+                                monitoring = self.monitoring,
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)
 
