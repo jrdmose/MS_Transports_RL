@@ -69,7 +69,7 @@ def generate_routefile(parent_dir):
     pSN = 1 / 80
 
     if parent_dir == None:
-        route_file_dir = "cross.rou.xml"
+        route_file_dir = "./network/cross.rou.xml"
     else:
         route_file_dir = os.path.join(parent_dir,"cross.rou.xml")
 
