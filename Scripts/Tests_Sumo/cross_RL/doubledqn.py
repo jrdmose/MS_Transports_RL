@@ -12,7 +12,7 @@ import keras.backend as K
 
 SAVE_AFTER = 11000 # Save model checkpoint
 STORE_LOGS_AFTER = 100 # Store tensorflow logs after STORE_LOGS_AFTER iterations
-WARM_UP_NET = 20 # Number of simu steps to warm up the network
+
 
 class DoubleDQN:
     """The DQN agent. Handles the updating of q-networks, takes action, and gets environment response.
@@ -70,7 +70,6 @@ class DoubleDQN:
                  max_ep_length,
                  env_name,
                  output_dir,
-                 route_file,
                  monitoring,
                  experiment_id,
                  summary_writer,
@@ -95,7 +94,6 @@ class DoubleDQN:
         self.trained_episodes = 0
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
-        self.route_file = route_file
         self.monitoring = monitoring
         self.experiment_id = experiment_id
         self.summary_writer = summary_writer
@@ -109,19 +107,7 @@ class DoubleDQN:
         self.q_network.compile(optimizer, loss_func, opt_metric)
         self.target_q_network.compile(optimizer, loss_func, opt_metric)
 
-    def warm_up_net(self, env, num_it):
-        """ Runs the environment for some iterations to fill the network.
-        The network is filled with a static policy
 
-        Parameters
-        ----------
-
-        num_it =  number of simulation steps to run
-        """
-
-        for i in range(num_it):
-            action = env.action.select_action("fixed", env=env, v_row_t = 15, h_row_t = 40)
-            env.step(action)
 
     def fill_replay(self, env):
         """Helper method for train. Fills the memory before model training begins
@@ -135,9 +121,8 @@ class DoubleDQN:
 
         # print("Filling experience replay memory...")
 
-        tools.generate_routefile(self.route_file)
         env.start_simulation(self.output_dir)
-        self.warm_up_net(env, WARM_UP_NET)
+
 
         for i in range(self.num_burn_in):
             action = env.action.select_action('rand')
@@ -147,7 +132,6 @@ class DoubleDQN:
             if done:
                 print("Episode finished during memory replay fill. Starting new episode...")
                 env.start_simulation(self.output_dir)
-                self.warm_up_net( env, WARM_UP_NET)
 
         env.stop_simulation()
         # print("...done filling replay memory")
@@ -217,15 +201,13 @@ class DoubleDQN:
 
         for i in range(num_episodes):
             # print progress of training
-            if self.trained_episodes % 10 == 0:
+            if self.trained_episodes % 1 == 0:
                 print('Run {} -- running episode {} / {}'.format(connection_label,
                                                             self.trained_episodes+1,
                                                             start_train_ep + num_episodes))
 
             # Each time an episode is run need to create a new random routing
-            tools.generate_routefile(self.route_file)
             env.start_simulation(self.output_dir)
-            self.warm_up_net( env, WARM_UP_NET)
 
             nextstate = env.state.get()
             done = False
@@ -319,8 +301,6 @@ class DoubleDQN:
         nextstate = env.state.get()
         done = False
         it = 0
-
-        self.warm_up_net( env, WARM_UP_NET)
 
         transition = {
             "it" : it,
