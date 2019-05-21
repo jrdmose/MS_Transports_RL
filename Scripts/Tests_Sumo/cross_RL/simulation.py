@@ -174,10 +174,10 @@ class simulator:
                                 summary_writer = self.summary_writer)
 
 
-    def train(self, num_episodes):
+    def train(self):
         self.ddqn.fill_replay(self.env)
         self.ddqn.train(env = self.env,
-                        num_episodes = num_episodes,
+                        num_episodes = self.num_episodes,
                         policy = self.policy,
                         connection_label = self.connection_label)
 
