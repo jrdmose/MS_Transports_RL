@@ -70,6 +70,7 @@ class DoubleDQN:
                  max_ep_length,
                  env_name,
                  output_dir,
+                 route_file,
                  monitoring,
                  experiment_id,
                  summary_writer,
@@ -94,6 +95,7 @@ class DoubleDQN:
         self.trained_episodes = 0
         self.max_ep_len = max_ep_length
         self.output_dir = output_dir
+        self.route_file = route_file
         self.monitoring = monitoring
         self.experiment_id = experiment_id
         self.summary_writer = summary_writer
@@ -131,9 +133,9 @@ class DoubleDQN:
         policy : (str) policy to be used to fill memory
         """
 
-        #print("Filling experience replay memory...")
+        print("Filling experience replay memory...")
 
-        tools.generate_routefile(self.output_dir)
+        tools.generate_routefile(self.route_file)
         env.start_simulation(self.output_dir)
         self.warm_up_net(env, WARM_UP_NET)
 
@@ -148,7 +150,7 @@ class DoubleDQN:
                 self.warm_up_net( env, WARM_UP_NET)
 
         env.stop_simulation()
-        #print("...done filling replay memory")
+        print("...done filling replay memory")
 
     def update_network(self):
         """Helper method for train. Computes keras neural network updates using samples from memory.
@@ -213,8 +215,6 @@ class DoubleDQN:
         all_rewards = []
         start_train_ep = self.trained_episodes
 
-
-
         for i in range(num_episodes):
             # print progress of training
             if self.trained_episodes % 10 == 0:
@@ -223,7 +223,7 @@ class DoubleDQN:
                                                             start_train_ep + num_episodes))
 
             # Each time an episode is run need to create a new random routing
-            tools.generate_routefile(self.output_dir)
+            tools.generate_routefile(self.route_file)
             env.start_simulation(self.output_dir)
             self.warm_up_net( env, WARM_UP_NET)
 

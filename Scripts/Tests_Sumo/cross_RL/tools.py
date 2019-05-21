@@ -57,7 +57,7 @@ def get_output_folder(parent_dir, exp_id):
 ### TO DO
 # Create a class to specify different types of demand
 
-def generate_routefile(parent_dir):
+def generate_routefile(route_file):
     """Returns XML file specifying network layout for sumo simulation"""
 
     N = 3600  # number of time steps
@@ -68,12 +68,7 @@ def generate_routefile(parent_dir):
     pWE = 1 / 20
     pSN = 1 / 80
 
-    if parent_dir == None:
-        route_file_dir = "cross.rou.xml"
-    else:
-        route_file_dir = os.path.join(parent_dir,"cross.rou.xml")
-
-    with open(route_file_dir, "w") as routes:
+    with open(route_file, "w") as routes:
         print("""<routes>
         <vType id="car" accel="0.8" decel="4.5" sigma="0.5" length="5" minGap="2.5" maxSpeed="16.67" guiShape="passenger"/>
         <route id="right" edges="51o 1i 2o 52i" />
