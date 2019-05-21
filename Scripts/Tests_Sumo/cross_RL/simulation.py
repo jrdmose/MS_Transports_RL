@@ -168,11 +168,10 @@ class simulator:
                                 max_ep_length = self.max_ep_length,
                                 env_name = self.env,
                                 output_dir = self.output_dir,
+                                route_file = self.route_file,
                                 monitoring = self.monitoring,
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)
-
-        # Fill memory
 
 
     def train(self, num_episodes):
