@@ -182,6 +182,7 @@ class simulator:
                         num_episodes = self.num_episodes,
                         policy = self.policy,
                         connection_label = self.connection_label)
+        # print(self.ddqn.q_network.get_weights())
 
     def load(self,checkpoint_dir):
         self.ddqn.load(checkpoint_dir)
@@ -193,10 +194,12 @@ class simulator:
 
         self.env.render(use_gui)
 
-        mean_durations = []
+        mean_delays = []
         for i in range(runs):
-            all_trans, mean_duration = self.ddqn.evaluate(env = self.env,
+            all_trans, mean_delay = self.ddqn.evaluate(env = self.env,
                                                         policy = "greedy")
-            mean_durations.append(mean_duration)
+            mean_delays.append(mean_delay)
 
-        return sum(mean_durations)/runs
+        # print(self.ddqn.q_network.get_weights())
+
+        return sum(mean_delays)/runs
