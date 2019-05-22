@@ -350,7 +350,7 @@ class Action:
         q_values : (np.array) predicted q-values
         """
 
-        if np.random.uniform() > eps:
+        if np.random.uniform() < eps:
             return self.select_rand(q_values)
         else:
             return self.select_greedy(q_values)
@@ -376,3 +376,10 @@ class Action:
         else :
             eps = final_eps
         return self.select_epsgreedy(q_values , eps)
+
+    # def select_epsgreedy_decay(self, q_values, itr, start_eps = 1, final_eps = 0.05, total_it = 100000):
+    #     """ eps-greedy policy with the eps decreasing linearly from start_eps to
+    #         final_eps over total_it steps.
+    #     """
+    #     eps =*
+    #     return self.select_epsgreedy(q_values , eps)
