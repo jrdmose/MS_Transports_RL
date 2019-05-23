@@ -327,7 +327,7 @@ class Action:
         elif policy == "epsgreedy_decay":
             return self.select_epsgreedy_decay(q_values, **kwargs)
         else:
-           raise ValueError("Policy {} not found".format(policy))
+            raise ValueError("Policy {} not found".format(policy))
 
     def select_rand(self, q_values):
         """Feeds into select_greedy or directly into select_action method.
