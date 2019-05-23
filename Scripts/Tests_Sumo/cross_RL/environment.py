@@ -68,6 +68,7 @@ class Env:
                  demand,
                  state_shape,
                  num_actions,
+                 eps,
                  use_gui = False,
                  delta_time = 10,
                  connection_label = "lonely_worker"):
@@ -94,7 +95,7 @@ class Env:
         self.render(self.use_gui)
 
         self.state = Observation(state_shape, self.input_lanes)
-        self.action = Action(num_actions)
+        self.action = Action(num_actions, eps)
         self.counter = np.zeros((1,2))
 
     def warm_up_net(self, num_it):
@@ -291,10 +292,11 @@ class Action:
         Choose whether to explore or exploit.
     """
 
-    def __init__( self, num_actions):
+    def __init__( self, num_actions, eps):
 
         self.num_actions = num_actions
         self.action_space = np.identity(num_actions)
+        self.eps = eps
 
     def select_action(self, policy, q_values = None, **kwargs):
         """Takes policy as argument, and then calls the corresponding helper method.
@@ -321,6 +323,8 @@ class Action:
             return self.select_fixed(q_values, **kwargs) #q values not used
         elif policy == "linDecEpsGreedy":
             return self.select_discepsgreedy(q_values, **kwargs)
+        elif policy == "epsgreedy_decay":
+            return self.select_epsgreedy_decay(q_values, **kwargs)
 
     def select_rand(self, q_values):
         """Feeds into select_greedy or directly into select_action method.
@@ -339,7 +343,7 @@ class Action:
 
         return np.argmax(q_values)
 
-    def select_epsgreedy(self, q_values, eps):
+    def select_epsgreedy(self, q_values):
         """Feeds into select_action method.
         If explore, select action randomly,
         if exploit, select action greedily using the predicted q values
@@ -350,7 +354,11 @@ class Action:
         q_values : (np.array) predicted q-values
         """
 
+<<<<<<< HEAD
         if np.random.uniform() < eps:
+=======
+        if np.random.uniform() < self.eps:
+>>>>>>> 073b0d60318be369c721303c41a8f37f8dcffd55
             return self.select_rand(q_values)
 
         else:
@@ -368,12 +376,25 @@ class Action:
         elif state.get()[:,10] > h_row_t:
             return 0
 
+<<<<<<< HEAD
     def select_discepsgreedy(self, q_values, itr, start_eps = 1, final_eps = 0.1, total_it = 100000 ):
+=======
+    def select_discepsgreedy(self, q_values, itr, final_eps = 0.2, total_it = 200000):
+>>>>>>> 073b0d60318be369c721303c41a8f37f8dcffd55
         """ eps-greedy policy with the eps decreasing linearly from start_eps to
             final_eps over total_it steps.
         """
         if itr < total_it:
-            eps = (total_it - itr) / total_it * (start_eps - final_eps) + final_eps
+            self.eps = (total_it - itr) / total_it * (self.eps - final_eps) + final_eps
         else :
-            eps = final_eps
-        return self.select_epsgreedy(q_values , eps)
+            self.eps = final_eps
+        return self.select_epsgreedy(q_values)
+
+    def select_epsgreedy_decay(self, q_values, itr, omega = 1-1e-9):
+        """ eps-greedy policy with the eps decreasing exponentially.
+        """
+        if self.eps < 0.2:
+            self.eps = 0.2
+        else :
+            self.eps *= omega ** itr
+        return self.select_epsgreedy(q_values)

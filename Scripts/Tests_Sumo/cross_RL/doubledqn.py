@@ -172,15 +172,14 @@ class DoubleDQN:
         # keras method to train on batch that returns loss
         fit = self.q_network.fit(states_m, target_batch, batch_size = self.batch_size, verbose = 0)
 
-        # get weights
-        weights = self.q_network.get_weights()
-
         # Update weights every target_update_freq steps
         if self.itr % self.target_update_freq == 0:
+            # get weights
+            weights = self.q_network.get_weights()
             self.target_q_network.set_weights(weights)
 
         # Save network every save_after iterations if monitoring allowed
-        if self.output_dir and self.itr % SAVE_AFTER == 0:
+        if self.monitoring and self.itr % SAVE_AFTER == 0:
             self.save()
 
         return fit.history["loss"][0]
@@ -217,11 +216,12 @@ class DoubleDQN:
                 'total_reward': 0,
                 'episode_length': 0,
                 'max_q_value': 0,
+                'mean_delay': 0
             }
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
-                if policy == "linDecEpsGreedy":
+                if policy == "linDecEpsGreedy" or policy == "epsgreedy_decay":
                     kwargs["itr"] = self.itr
 
                 q_values = self.q_network.predict(nextstate)
@@ -237,7 +237,6 @@ class DoubleDQN:
 
                 if self.monitoring and self.itr % STORE_LOGS_AFTER == 0:
                     # create list of stats for Tensorboard, add scalars
-
 
                     training_data = [tf.Summary.Value(tag = 'TD - loss',
                                                       simple_value = loss)]
@@ -285,8 +284,11 @@ class DoubleDQN:
 
                                #tf.Summary.Value(tag = 'Average vehicle delay static',
                                #                  simple_value = static_dur)]
+                stats["mean_delay"] = mean_delay
                 self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
+            all_stats.append(stats)
             self.trained_episodes += 1
+        return all_stats
 
 
     def evaluate(self, env, policy, **kwargs):
@@ -330,9 +332,9 @@ class DoubleDQN:
             all_trans.append(copy.deepcopy(transition))
 
         env.stop_simulation()
-        mean_duration = tools.compute_mean_duration(self.output_dir)
+        mean_delay = tools.compute_mean_duration(self.output_dir)
 
-        return all_trans, mean_duration
+        return all_trans, mean_delay
 
     def histo_summary(self, values, bins=100):
         """Helper function in train method. Log a histogram of the tensor of values for tensorboard.

@@ -151,7 +151,8 @@ class simulator:
                                 demand =  self.demand,
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
-                                use_gui = self.use_gui)
+                                use_gui = self.use_gui,
+                                eps = self.eps)
 
         # Initialize replay memory
         self.memory = memory.ReplayMemory(max_size = self.max_size,
@@ -183,6 +184,7 @@ class simulator:
                         num_episodes = self.num_episodes,
                         policy = self.policy,
                         connection_label = self.connection_label)
+        # print(self.ddqn.q_network.get_weights())
 
     def load(self,checkpoint_dir):
         self.ddqn.load(checkpoint_dir)
@@ -194,10 +196,16 @@ class simulator:
 
         self.env.render(use_gui)
 
-        mean_durations = []
+        mean_delays = []
         for i in range(runs):
-            all_trans, mean_duration = self.ddqn.evaluate(env = self.env,
+            all_trans, mean_delay = self.ddqn.evaluate(env = self.env,
                                                         policy = "greedy")
-            mean_durations.append(mean_duration)
+            mean_delays.append(mean_delay)
 
+<<<<<<< HEAD
         return np.mean(mean_durations)
+=======
+        # print(self.ddqn.q_network.get_weights())
+
+        return sum(mean_delays)/runs
+>>>>>>> 073b0d60318be369c721303c41a8f37f8dcffd55
