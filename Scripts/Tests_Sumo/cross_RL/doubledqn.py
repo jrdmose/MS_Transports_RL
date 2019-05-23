@@ -125,12 +125,13 @@ class DoubleDQN:
 
 
         for i in range(self.num_burn_in):
-            action = env.action.select_action('rand')
+            action = env.action.select_action('randUni')
             state, reward, nextstate, done = env.step(action)
             self.memory.append(state, action, reward, nextstate, done)
             # If episode finished, continue with another episode
             if done:
                 print("Episode finished during memory replay fill. Starting new episode...")
+                env.stop_simulation()
                 env.start_simulation(self.output_dir)
 
         env.stop_simulation()

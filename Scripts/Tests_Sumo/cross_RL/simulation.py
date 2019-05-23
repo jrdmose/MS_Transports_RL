@@ -202,10 +202,6 @@ class simulator:
                                                         policy = "greedy")
             mean_delays.append(mean_delay)
 
-<<<<<<< HEAD
-        return np.mean(mean_durations)
-=======
         # print(self.ddqn.q_network.get_weights())
 
         return sum(mean_delays)/runs
->>>>>>> 073b0d60318be369c721303c41a8f37f8dcffd55
