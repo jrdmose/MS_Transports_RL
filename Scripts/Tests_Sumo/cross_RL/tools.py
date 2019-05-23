@@ -124,7 +124,7 @@ def compute_mean_duration(parent_dir):
 
     tree = ET.parse(os.path.join(parent_dir,'tripinfo.xml'))
     root = tree.getroot()
-
+    
     mean_duration = []
     for veh in root:
         mean_duration.append(float(veh.get("duration")))

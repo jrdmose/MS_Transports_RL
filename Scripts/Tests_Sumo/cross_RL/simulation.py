@@ -7,6 +7,7 @@ import os
 
 import tensorflow as tf
 from keras import optimizers
+import numpy as np
 
 class simulator:
     """Wrapper that handles all objects needed for a simulation:

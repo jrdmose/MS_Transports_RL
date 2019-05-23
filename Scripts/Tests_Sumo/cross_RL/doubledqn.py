@@ -126,7 +126,6 @@ class DoubleDQN:
 
         for i in range(self.num_burn_in):
             action = env.action.select_action('randUni')
-            # print(action)
             state, reward, nextstate, done = env.step(action)
             self.memory.append(state, action, reward, nextstate, done)
             # If episode finished, continue with another episode
@@ -283,6 +282,7 @@ class DoubleDQN:
                 else:
                     mean_delay = tools.compute_mean_duration(self.output_dir)
 
+                mean_delay = tools.compute_mean_duration(self.output_dir)
                 episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',
