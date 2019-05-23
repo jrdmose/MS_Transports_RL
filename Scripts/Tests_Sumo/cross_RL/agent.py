@@ -18,6 +18,8 @@ def get_model(model_name, **kwargs):
         return linear(**kwargs)
     elif model_name == 'simple':
         return simple(**kwargs)
+    else:
+        raise ValueError("Model name {} not found".format(model_name))
 
 
 def linear(input_shape, num_actions):

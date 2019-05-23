@@ -121,7 +121,8 @@ class Env:
 
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
-                    '-r' ,self.route]
+                    '-r' ,self.route,
+                    '--time-to-teleport', '-1']
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
@@ -255,8 +256,8 @@ class Observation:
         """
 
         for i,lane in enumerate(self.lanes):
-            self.obs[:,i] = traci.lane.getLastStepOccupancy(lane) # Occupancy
-            self.obs[:,i+4] = traci.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
+            self.obs[:,i] = connection.lane.getLastStepOccupancy(lane) # Occupancy
+            self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
 
         self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
@@ -325,6 +326,8 @@ class Action:
             return self.select_discepsgreedy(q_values, **kwargs)
         elif policy == "epsgreedy_decay":
             return self.select_epsgreedy_decay(q_values, **kwargs)
+        else:
+           raise ValueError("Policy {} not found".format(policy))
 
     def select_rand(self, q_values):
         """Feeds into select_greedy or directly into select_action method.

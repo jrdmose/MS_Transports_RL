@@ -125,12 +125,14 @@ class DoubleDQN:
 
 
         for i in range(self.num_burn_in):
-            action = env.action.select_action('rand')
+            action = env.action.select_action('randUni')
+            # print(action)
             state, reward, nextstate, done = env.step(action)
             self.memory.append(state, action, reward, nextstate, done)
             # If episode finished, continue with another episode
             if done:
                 print("Episode finished during memory replay fill. Starting new episode...")
+                env.stop_simulation()
                 env.start_simulation(self.output_dir)
 
         env.stop_simulation()
@@ -275,7 +277,11 @@ class DoubleDQN:
             #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
             if self.monitoring:
-                mean_delay = tools.compute_mean_duration(self.output_dir)
+
+                if not done and stats["episode_length"] >= self.max_ep_len:
+                    mean_delay = -1
+                else:
+                    mean_delay = tools.compute_mean_duration(self.output_dir)
 
                 episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
@@ -302,10 +308,9 @@ class DoubleDQN:
         env.start_simulation(self.output_dir)
         nextstate = env.state.get()
         done = False
-        it = 0
 
         transition = {
-            "it" : it,
+            "it" : 0,
             "state" : nextstate,
             "q_values" : np.zeros(2),
             "action" : 0,
@@ -322,7 +327,7 @@ class DoubleDQN:
             kwargs["itr"] = self.itr
 
 
-        while not done and it < self.max_ep_len:
+        while not done and transition["it"] < self.max_ep_len:
             #import pdb; pdb.set_trace()
             transition["q_values"] = self.q_network.predict(transition["next_state"])
             transition["action"] = env.action.select_action(policy, q_values = transition["q_values"], **kwargs)
@@ -331,8 +336,12 @@ class DoubleDQN:
 
             all_trans.append(copy.deepcopy(transition))
 
-        env.stop_simulation()
-        mean_delay = tools.compute_mean_duration(self.output_dir)
+        if not done and transition["it"] >= self.max_ep_len:
+            env.stop_simulation()
+            mean_delay = -1
+        else:
+            env.stop_simulation()
+            mean_delay = tools.compute_mean_duration(self.output_dir)
 
         return all_trans, mean_delay
 
