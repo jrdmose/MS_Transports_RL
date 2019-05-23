@@ -350,8 +350,9 @@ class Action:
         q_values : (np.array) predicted q-values
         """
 
-        if np.random.uniform() > eps:
+        if np.random.uniform() < eps:
             return self.select_rand(q_values)
+
         else:
             return self.select_greedy(q_values)
 
@@ -367,7 +368,7 @@ class Action:
         elif state.get()[:,10] > h_row_t:
             return 0
 
-    def select_discepsgreedy(self, q_values, itr, start_eps = 1, final_eps = 0.05, total_it = 100000):
+    def select_discepsgreedy(self, q_values, itr, start_eps = 1, final_eps = 0.1, total_it = 100000 ):
         """ eps-greedy policy with the eps decreasing linearly from start_eps to
             final_eps over total_it steps.
         """

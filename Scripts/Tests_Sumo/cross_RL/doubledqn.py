@@ -276,8 +276,8 @@ class DoubleDQN:
             #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
             if self.monitoring:
-                mean_delay = tools.compute_mean_duration(self.output_dir)
 
+                mean_delay = tools.compute_mean_duration(self.output_dir)
                 episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',

@@ -7,6 +7,7 @@ import os
 
 import tensorflow as tf
 from keras import optimizers
+import numpy as np
 
 class simulator:
     """Wrapper that handles all objects needed for a simulation:
@@ -199,4 +200,4 @@ class simulator:
                                                         policy = "greedy")
             mean_durations.append(mean_duration)
 
-        return sum(mean_durations)/runs
+        return np.mean(mean_durations)

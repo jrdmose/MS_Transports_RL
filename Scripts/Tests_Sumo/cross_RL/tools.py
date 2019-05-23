@@ -80,7 +80,7 @@ def get_veh_sec(x, demand,high, nominal,total_time):
 def generate_routefile(route_file_dir, demand):
     """Returns XML file specifying network layout for sumo simulation"""
 
-    N = 7000  # number of time steps
+    N = 5000  # number of time steps
 
     nominal = 1
     high =2 # At rush hour two times more cars
@@ -124,7 +124,7 @@ def compute_mean_duration(parent_dir):
 
     tree = ET.parse(os.path.join(parent_dir,'tripinfo.xml'))
     root = tree.getroot()
-
+    
     mean_duration = []
     for veh in root:
         mean_duration.append(float(veh.get("duration")))
