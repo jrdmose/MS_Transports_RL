@@ -172,11 +172,10 @@ class DoubleDQN:
         # keras method to train on batch that returns loss
         fit = self.q_network.fit(states_m, target_batch, batch_size = self.batch_size, verbose = 0)
 
-        # get weights
-        weights = self.q_network.get_weights()
-
         # Update weights every target_update_freq steps
         if self.itr % self.target_update_freq == 0:
+            # get weights
+            weights = self.q_network.get_weights()
             self.target_q_network.set_weights(weights)
 
         # Save network every save_after iterations if monitoring allowed
@@ -222,7 +221,7 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
-                if policy == "linDecEpsGreedy":
+                if policy == "linDecEpsGreedy" or policy == "epsgreedy_decay":
                     kwargs["itr"] = self.itr
 
                 q_values = self.q_network.predict(nextstate)

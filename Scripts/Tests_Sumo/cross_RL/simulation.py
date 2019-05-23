@@ -150,7 +150,8 @@ class simulator:
                                 demand =  self.demand,
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
-                                use_gui = self.use_gui)
+                                use_gui = self.use_gui,
+                                eps = self.eps)
 
         # Initialize replay memory
         self.memory = memory.ReplayMemory(max_size = self.max_size,
