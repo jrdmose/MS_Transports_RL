@@ -135,6 +135,7 @@ class simulator:
         self.max_size = max_size
         self.state_shape = state_shape
 
+
         # Initialize Q-networks (value and target)
         self.q_network = agent.get_model(model_name = self.q_network_type,
                                 input_shape = (self.state_shape[1],),
@@ -180,11 +181,12 @@ class simulator:
 
     def train(self):
         self.ddqn.fill_replay(self.env)
+
         self.ddqn.train(env = self.env,
                         num_episodes = self.num_episodes,
                         policy = self.policy,
                         connection_label = self.connection_label)
-        # print(self.ddqn.q_network.get_weights())
+        #print(self.ddqn.q_network.get_weights())
 
     def load(self,checkpoint_dir):
         self.ddqn.load(checkpoint_dir)
@@ -199,7 +201,7 @@ class simulator:
         mean_delays = []
         for i in range(runs):
             all_trans, mean_delay = self.ddqn.evaluate(env = self.env,
-                                                        policy = "greedy")
+                                                       policy = "greedy")
             mean_delays.append(mean_delay)
 
         # print(self.ddqn.q_network.get_weights())

@@ -107,9 +107,8 @@ class Env:
 
         num_it =  number of simulation steps to run
         """
-
         for i in range(num_it):
-            action = self.action.select_action("fixed", state = self.state, v_row_t = 15, h_row_t = 40)
+            action = self.action.select_action("fixed", state = self.state, v_row_t = 20, h_row_t = 40)
             self.step(action)
 
 
@@ -131,6 +130,7 @@ class Env:
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)
+        self.state.update_state(connection = self.connection)
         self.warm_up_net(WARM_UP_NET)
         self.state.update_state(connection = self.connection)
 
@@ -158,6 +158,11 @@ class Env:
             self.connection.trafficlight.setPhase("0",1)
             self.counter += self.state.get()[:,-2:]
             self.state.get()[:,-2:] = 0
+        else:
+            try:
+                action == -1 # Do nothing (for fixed policy)
+            except:
+                raise ValueError("Action ''{}'' not a valid action".format(action))
 
     def compute_reward(self, state, next_state):
         """ Computes reward from state and next_state.
@@ -373,8 +378,10 @@ class Action:
         #Horizontal row
         elif state.get()[:,10] > h_row_t:
             return 0
+        else:
+            return -1 # Do nothing
 
-    def select_discepsgreedy(self, q_values, itr, final_eps = 0.2, total_it = 200000):
+    def select_discepsgreedy(self, q_values, itr, final_eps = 0.1, total_it = 100000):
         """ eps-greedy policy with the eps decreasing linearly from start_eps to
             final_eps over total_it steps.
         """

@@ -107,8 +107,6 @@ class DoubleDQN:
         self.q_network.compile(optimizer, loss_func, opt_metric)
         self.target_q_network.compile(optimizer, loss_func, opt_metric)
 
-
-
     def fill_replay(self, env):
         """Helper method for train. Fills the memory before model training begins
         choosing random actions.
@@ -122,7 +120,6 @@ class DoubleDQN:
         # print("Filling experience replay memory...")
 
         env.start_simulation(self.output_dir)
-
 
         for i in range(self.num_burn_in):
             action = env.action.select_action('randUni')
@@ -230,8 +227,12 @@ class DoubleDQN:
                 state, reward, nextstate, done = env.step(action)
                 self.memory.append(state, action, reward, nextstate, done)
 
-                # Update network weights and record loss for Tensorboard
+                stats["ep_id"] = self.trained_episodes
+                stats["episode_length"] += 1
+                stats['total_reward'] += reward
+                stats['max_q_value'] += max(q_values)
 
+                # Update network weights and record loss for Tensorboard
                 if self.itr % self.train_freq == 0:
                     loss = self.update_network()
 
@@ -265,10 +266,7 @@ class DoubleDQN:
 
                 self.itr += 1
 
-                stats["ep_id"] = self.trained_episodes
-                stats["episode_length"] += 1
-                stats['total_reward'] += reward
-                stats['max_q_value'] += max(q_values)
+
 
             env.stop_simulation()
 
@@ -282,7 +280,6 @@ class DoubleDQN:
                 else:
                     mean_delay = tools.compute_mean_duration(self.output_dir)
 
-                mean_delay = tools.compute_mean_duration(self.output_dir)
                 episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',
