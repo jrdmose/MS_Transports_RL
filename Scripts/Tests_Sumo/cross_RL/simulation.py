@@ -97,6 +97,7 @@ class simulator:
                  eps = 0.1,
                  num_episodes = 2,
                  monitoring = False,
+                 episode_recording = False,
                  hparams = None):
 
         if hparams:
@@ -125,6 +126,7 @@ class simulator:
         self.eps = eps
         self.num_episodes = num_episodes
         self.monitoring = monitoring
+        self.episode_recording = episode_recording
         self.output_dir, self.summary_writer_folder = tools.get_output_folder("./logs", self.experiment_id, args_description)
         self.summary_writer = tf.summary.FileWriter(logdir = self.summary_writer_folder)
 
@@ -181,6 +183,7 @@ class simulator:
                                 env_name = self.env,
                                 output_dir = self.output_dir,
                                 monitoring = self.monitoring,
+                                episode_recording = self.episode_recording,
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)
 
@@ -204,12 +207,37 @@ class simulator:
 
         self.env.render(use_gui)
 
-        mean_delays = []
+        evaluation_results = {
+            "runs" : runs,
+            "unfinished_runs" : 0,
+            "average_delay" : [],
+            "episode_mean_delays" : [],
+            "episode_delay_lists" : []
+        }
+
         for i in range(runs):
-            all_trans, mean_delay = self.ddqn.evaluate(env = self.env,
-                                                       policy = "greedy")
-            mean_delays.append(mean_delay)
+
+            print('Evaluate {} -- running episode {} / {}'.format(self.connection_label,
+                                                        i+1,
+                                                        runs))
+            all_trans, mean_delay, vehicle_delays = self.ddqn.evaluate(env = self.env,
+                                                        policy = "greedy")
+
+            evaluation_results["episode_delay_lists"].append(vehicle_delays)
+            evaluation_results["episode_mean_delays"].append(mean_delay)
+
+            if mean_delay != -1:
+                evaluation_results["average_delay"].append(mean_delay)
+            else:
+                evaluation_results["unfinished_runs"] += 1
+
+        runs -= evaluation_results["unfinished_runs"]
+
+        if runs == 0:
+            evaluation_results["average_delay"].append(-1)
+        else:
+            evaluation_results["average_delay"] = sum(evaluation_results["average_delay"])/runs
 
         # print(self.ddqn.q_network.get_weights())
 
-        return sum(mean_delays)/runs
+        return evaluation_results
