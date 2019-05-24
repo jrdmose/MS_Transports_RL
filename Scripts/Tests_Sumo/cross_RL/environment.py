@@ -127,6 +127,7 @@ class Env:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(parent_dir + '/tripinfo.xml')
 
+
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)

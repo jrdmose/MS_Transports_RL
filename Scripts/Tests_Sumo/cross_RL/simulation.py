@@ -96,9 +96,15 @@ class simulator:
                  policy = "linDecEpsGreedy",
                  eps = 0.1,
                  num_episodes = 2,
-                 monitoring = False):
+                 monitoring = False,
+                 hparams = None):
 
-        # ddqn parameters
+        if hparams:
+            args_description = locals()
+            args_description = str({ key : args_description[key] for key in hparams})
+        else:
+            args_description = "single_worker"
+
         self.connection_label = connection_label
         self.q_network_type = q_network_type
         self.target_q_network_type = target_q_network_type
@@ -119,8 +125,8 @@ class simulator:
         self.eps = eps
         self.num_episodes = num_episodes
         self.monitoring = monitoring
-        self.output_dir = tools.get_output_folder("./logs", self.experiment_id)
-        self.summary_writer = tf.summary.FileWriter(logdir = self.output_dir)
+        self.output_dir, self.summary_writer_folder = tools.get_output_folder("./logs", self.experiment_id, args_description)
+        self.summary_writer = tf.summary.FileWriter(logdir = self.summary_writer_folder)
 
         # environment parameters
         self.net_file = os.path.join(network_dir, net_file)
