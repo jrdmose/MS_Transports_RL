@@ -120,13 +120,15 @@ def generate_routefile(route_file_dir, demand):
                 vehNr += 1
         print("</routes>", file=routes)
 
-def compute_mean_duration(parent_dir):
+
+def get_vehicle_delay(parent_dir):
 
     tree = ET.parse(os.path.join(parent_dir,'tripinfo.xml'))
     root = tree.getroot()
 
-    mean_duration = []
-    for veh in root:
-        mean_duration.append(float(veh.get("duration")))
+    vehicle_delay = []
 
-    return np.mean(mean_duration)
+    for veh in root:
+        vehicle_delay.append(float(veh.get("duration")))
+
+    return vehicle_delay
