@@ -5,7 +5,7 @@ import random
 import numpy as np
 import xml.etree.ElementTree as ET
 
-def get_output_folder(parent_dir, exp_id):
+def get_output_folder(parent_dir, exp_id, description = None):
     """Return save folder parent_dir/Results/exp_id
 
     If this directory already exists it creates parent_dir/Results/exp_id_{i},
@@ -127,6 +127,7 @@ def get_vehicle_delay(parent_dir):
     root = tree.getroot()
 
     vehicle_delay = []
+
     for veh in root:
         vehicle_delay.append(float(veh.get("duration")))
 
