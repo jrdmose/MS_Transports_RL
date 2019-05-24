@@ -5,7 +5,7 @@ import random
 import numpy as np
 import xml.etree.ElementTree as ET
 
-def get_output_folder(parent_dir, exp_id, description = None):
+def get_output_folder(output_dir, exp_id, args_description):
     """Return save folder parent_dir/Results/exp_id
 
     If this directory already exists it creates parent_dir/Results/exp_id_{i},
@@ -30,28 +30,33 @@ def get_output_folder(parent_dir, exp_id, description = None):
     """
     try:
         # Returns an error if parent_dir already exists
-        os.makedirs(parent_dir)
+        os.makedirs(output_dir)
     except:
         pass
 
-    experiment_id = 1
-    if exp_id in os.listdir(parent_dir):
+    exp_run = 1
+    if exp_id in os.listdir(output_dir):
 
-        new_folder = os.path.join(parent_dir,exp_id,"run"+"_"+str(experiment_id))
+        new_folder = os.path.join(output_dir,exp_id,"run"+"_"+str(exp_run))
 
         while os.path.exists(new_folder):
-            experiment_id +=1
-            new_folder = os.path.join(parent_dir,exp_id,"run"+"_"+str(experiment_id))
+            exp_run +=1
+            new_folder = os.path.join(output_dir,exp_id,"run"+"_"+str(exp_run))
 
-        parent_dir = new_folder
-        os.makedirs(parent_dir)
-        os.mkdir(os.path.join(parent_dir,"model_checkpoints"))
+        output_dir = new_folder
+        os.makedirs(output_dir)
+        os.mkdir(os.path.join(output_dir,"model_checkpoints"))
+        summary_writer_folder = os.path.join(output_dir,args_description)
+        os.mkdir(summary_writer_folder)
     else:
-        parent_dir = os.path.join(parent_dir,exp_id,"run"+"_"+str(experiment_id))
-        os.makedirs(parent_dir)
-        os.mkdir(os.path.join(parent_dir,"model_checkpoints"))
+        output_dir = os.path.join(output_dir,exp_id,"run"+"_"+str(exp_run))
+        os.makedirs(output_dir)
+        os.mkdir(os.path.join(output_dir,"model_checkpoints"))
+        summary_writer_folder = os.path.join(output_dir,args_description)
+        os.mkdir(summary_writer_folder)
 
-    return parent_dir
+
+    return output_dir , summary_writer_folder
 
 
 ### TO DO
@@ -123,7 +128,7 @@ def generate_routefile(route_file_dir, demand):
 
 def get_vehicle_delay(parent_dir):
 
-    tree = ET.parse(os.path.join(parent_dir,'tripinfo.xml'))
+    tree = ET.parse(os.path.join(output_dir,'tripinfo.xml'))
     root = tree.getroot()
 
     vehicle_delay = []
