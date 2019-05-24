@@ -126,7 +126,7 @@ def generate_routefile(route_file_dir, demand):
         print("</routes>", file=routes)
 
 
-def get_vehicle_delay(parent_dir):
+def get_vehicle_delay(output_dir):
 
     tree = ET.parse(os.path.join(output_dir,'tripinfo.xml'))
     root = tree.getroot()
