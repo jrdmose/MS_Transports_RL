@@ -259,12 +259,12 @@ class DoubleDQN:
                 if not done and stats["episode_length"] >= self.max_ep_len:
                     mean_delay = -1
                 else:
-                    mean_delay = tools.compute_mean_duration(self.output_dir)
+                    mean_delay = tools.get_vehicle_delay(self.output_dir)
 
                 episode_summary = [tf.Summary.Value(tag = 'Reward',
                                                   simple_value = stats['total_reward']),
                                    tf.Summary.Value(tag = 'Average vehicle delay',
-                                                  simple_value = mean_delay)]
+                                                  simple_value = np.mean(mean_delay))]
 
                                #tf.Summary.Value(tag = 'Average vehicle delay static',
                                #                  simple_value = static_dur)]
