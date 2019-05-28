@@ -203,6 +203,7 @@ class Env:
         wt = self.compute_waiting_time()
 
         self.take_action(action)
+
         self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
         self.state.update_state(connection = self.connection)
         next_state = self.state.get()

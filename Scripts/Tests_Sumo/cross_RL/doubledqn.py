@@ -128,12 +128,12 @@ class DoubleDQN:
             self.memory.append(state, action, reward, nextstate, done)
             # If episode finished, continue with another episode
             if done:
-                print("Episode finished during memory replay fill. Starting new episode...")
+                # print("Episode finished during memory replay fill. Starting new episode...")
                 env.stop_simulation()
                 env.start_simulation(self.output_dir)
 
         env.stop_simulation()
-        # print("...done filling replay memory")
+        print("...done filling replay memory")
 
 
     def update_network(self):
@@ -231,14 +231,9 @@ class DoubleDQN:
                 if self.itr % self.train_freq == 0:
                     loss = self.update_network()
 
-                if self.episode_recording:
-                    store_logs_after = 1
-                else:
-                    store_logs_after = 100
-
-                if self.monitoring and self.itr % store_logs_after == 0:
+                if self.monitoring:
                     # create list of stats for Tensorboard, add scalars
-                    self.write_tf_summary_within_ep(loss, nextstate, done, q_values)
+                    self.write_tf_summary_within_ep(loss, nextstate, done, q_values, reward)
 
                 self.itr += 1
 
@@ -260,26 +255,32 @@ class DoubleDQN:
         return all_stats
 
 
-    def write_tf_summary_within_ep(self, loss, nextstate, done, q_values):
+    def write_tf_summary_within_ep(self, loss, nextstate, done, q_values, reward):
 
         # record TD loss as scalar and add to list of stats to record
         training_data = [tf.Summary.Value(tag = '[1 - Main]: TD - loss',
-                                                  simple_value = loss)]
+                                                  simple_value = loss),
+                        tf.Summary.Value(tag = '[1 - Main]: Reward',
+                                                  simple_value = reward)]
         #  tf.Summary.Value(tag = 'learning rate',
         #                  simple_value = K.eval(self.q_network.optimizer.lr))]
 
-        # add histogram of weights to list of stats
-        for index, layer in enumerate(self.q_network.layers):
 
-            training_data.append(tf.Summary.Value(tag = "[2 - Weights]:" + str(layer.name) + " weights" ,
-                                                histo = self.histo_summary(layer.get_weights()[0])))
-            if len(layer.get_weights()) > 1:
-                training_data.append(tf.Summary.Value(tag = "[2 - Weights]:" + str(layer.name) + " relu" ,
-                                                histo = self.histo_summary(layer.get_weights()[1])))
-        training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 0",
-                                        simple_value = q_values[:,0]))
-        training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 1",
-                                        simple_value = q_values[:,1]))
+        store_logs_after = 100
+        if self.itr % store_logs_after == 0:
+
+            # add histogram of weights to list of stats
+            for index, layer in enumerate(self.q_network.layers):
+
+                training_data.append(tf.Summary.Value(tag = "[2 - Weights]:" + str(layer.name) + " weights" ,
+                                                    histo = self.histo_summary(layer.get_weights()[0])))
+                if len(layer.get_weights()) > 1:
+                    training_data.append(tf.Summary.Value(tag = "[2 - Weights]:" + str(layer.name) + " relu" ,
+                                                    histo = self.histo_summary(layer.get_weights()[1])))
+            training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 0",
+                                            simple_value = q_values[:,0]))
+            training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 1",
+                                            simple_value = q_values[:,1]))
 
         # add episode recording to list of stats
         if self.episode_recording:
@@ -309,7 +310,7 @@ class DoubleDQN:
         else:
             mean_delay = np.mean(vehicle_delay)
 
-        episode_summary = [tf.Summary.Value(tag = '[1 - Main]: Reward',
+        episode_summary = [tf.Summary.Value(tag = '[1 - Main]: Total Reward',
                                         simple_value = stats['total_reward']),
                         tf.Summary.Value(tag = '[1 - Main]: Average vehicle delay',
                                         simple_value = mean_delay),
