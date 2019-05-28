@@ -214,9 +214,7 @@ class DoubleDQN:
             stats = {
                 'ep_id' : self.trained_episodes,
                 'total_reward': 0,
-                'episode_length': 0,
-                'mean_delay': 0,
-                'vehicle_delay': []
+                'episode_length': 0
             }
 
             while not done and stats["episode_length"] < self.max_ep_len:
@@ -240,7 +238,7 @@ class DoubleDQN:
 
                 if self.monitoring and self.itr % store_logs_after == 0:
                     # create list of stats for Tensorboard, add scalars
-                    self.write_tf_summary_within_ep(loss, nextstate, done)
+                    self.write_tf_summary_within_ep(loss, nextstate, done, q_values)
 
                 self.itr += 1
 
@@ -256,35 +254,19 @@ class DoubleDQN:
             if self.monitoring:
                 self.write_tf_summary_after_ep(stats, done)
 
-                if not done and stats["episode_length"] >= self.max_ep_len:
-                    mean_delay = -1
-                else:
-                    mean_delay = tools.get_vehicle_delay(self.output_dir)
-
-                episode_summary = [tf.Summary.Value(tag = 'Reward',
-                                                  simple_value = stats['total_reward']),
-                                   tf.Summary.Value(tag = 'Average vehicle delay',
-                                                  simple_value = np.mean(mean_delay))]
-
-                               #tf.Summary.Value(tag = 'Average vehicle delay static',
-                               #                  simple_value = static_dur)]
-                stats["mean_delay"] = mean_delay
-                self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
-
             all_stats.append(stats)
             self.trained_episodes += 1
 
         return all_stats
 
 
-    def write_tf_summary_within_ep(self, loss, nextstate, done):
+    def write_tf_summary_within_ep(self, loss, nextstate, done, q_values):
 
         # record TD loss as scalar and add to list of stats to record
         training_data = [tf.Summary.Value(tag = '[1 - Main]: TD - loss',
                                                   simple_value = loss)]
         #  tf.Summary.Value(tag = 'learning rate',
         #                  simple_value = K.eval(self.q_network.optimizer.lr))]
-
 
         # add histogram of weights to list of stats
         for index, layer in enumerate(self.q_network.layers):
@@ -294,11 +276,10 @@ class DoubleDQN:
             if len(layer.get_weights()) > 1:
                 training_data.append(tf.Summary.Value(tag = "[2 - Weights]:" + str(layer.name) + " relu" ,
                                                 histo = self.histo_summary(layer.get_weights()[1])))
-
         training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 0",
-                                        simple_value = self.q_network.layers[-1].get_weights()[1][0]))
+                                        simple_value = q_values[:,0]))
         training_data.append(tf.Summary.Value(tag = "[3 - Actions] Q-values Action 1",
-                                        simple_value = self.q_network.layers[-1].get_weights()[1][1]))
+                                        simple_value = q_values[:,1]))
 
         # add episode recording to list of stats
         if self.episode_recording:
@@ -338,9 +319,6 @@ class DoubleDQN:
                                         simple_value = stats['episode_length'])]
                        #tf.Summary.Value(tag = 'Average vehicle delay static',
                        #                  simple_value = static_dur)]
-
-        stats["mean_delay"] = mean_delay
-        stats["vehicle_delay"] = vehicle_delay
 
         self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
 
