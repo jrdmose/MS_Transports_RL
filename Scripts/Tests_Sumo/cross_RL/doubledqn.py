@@ -225,6 +225,7 @@ class DoubleDQN:
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
+
                 self.memory.append(state, action, reward, nextstate, done)
 
                 # Update network weights and record loss for Tensorboard
@@ -245,6 +246,8 @@ class DoubleDQN:
                 stats["ep_id"] = self.trained_episodes
                 stats["episode_length"] += 1
                 stats['total_reward'] += reward
+
+
 
             env.stop_simulation()
 

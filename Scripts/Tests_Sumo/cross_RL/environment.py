@@ -178,13 +178,13 @@ class Env:
         # b = np.round(state,decimals=1)
         # aux = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
 
-        return np.sign(-np.sum(diff)) # delta waiting time in the network
+        return -np.sum(diff[:,10:]) # delta waiting time in the network
 
-    def compute_waiting_time(self):
-        aux= []
-        for lane in self.input_lanes:
-            aux.append(self.connection.lane.getWaitingTime(lane))
-        return np.array(aux)
+    # def compute_waiting_time(self):
+    #     aux= []
+    #     for lane in self.input_lanes:
+    #         aux.append(self.connection.lane.getWaitingTime(lane))
+    #     return np.array(aux)
 
     def step(self, action):
         """ Runs one step of the simulation.
@@ -199,16 +199,22 @@ class Env:
         action : (int) index of the one-hot encoded vector of action to be taken
         """
 
+
         state = copy.deepcopy(self.state.get())
-        wt = self.compute_waiting_time()
+        # wt = self.compute_waiting_time()
 
         self.take_action(action)
         self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
         self.state.update_state(connection = self.connection)
         next_state = self.state.get()
 
-        wt_next = self.compute_waiting_time()
-        reward = self.compute_reward(wt,wt_next)
+        # wt_next = self.compute_waiting_time()
+
+
+
+        reward = self.compute_reward(state,next_state)
+
+        print(state, next_state, reward)
 
         return state, reward, next_state, self.done()
 
@@ -252,6 +258,7 @@ class Observation:
 
         self.obs = np.zeros(shape)
         self.lanes = lanes
+        self.veh_time_in_lane = {lane:{} for lane in lanes}
 
     def update_state(self, connection):
         """
@@ -264,6 +271,7 @@ class Observation:
         for i,lane in enumerate(self.lanes):
             self.obs[:,i] = connection.lane.getLastStepOccupancy(lane) # Occupancy
             self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
+            self.obs[:,i+11] = self.compute_time_in_lane(connection, lane)
 
         self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
@@ -272,6 +280,30 @@ class Observation:
         elif self.obs[:,8] == 2:
             # Amount of time phase 2 (horizontal row) has been on since last phase change
             self.obs[:,10] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
+
+    def compute_time_in_lane(self, connection, lane):
+
+        previous_veh_time_in_lane = copy.deepcopy(self.veh_time_in_lane[lane])
+
+        veh_in_previous_state = set(previous_veh_time_in_lane.keys())
+        veh_in_state = set(connection.lane.getLastStepVehicleIDs(lane))
+
+        time = 0
+
+        intersection = veh_in_state & veh_in_previous_state
+        for veh in intersection:
+            self.veh_time_in_lane[lane][veh] += 10
+            time += self.veh_time_in_lane[lane][veh]
+
+        in_state = veh_in_state - veh_in_previous_state
+        for veh in in_state:
+            self.veh_time_in_lane[lane][veh] = 0
+
+        in_previous_state = veh_in_previous_state -veh_in_state
+        for veh in in_previous_state:
+            self.veh_time_in_lane[lane].pop(veh)
+
+        return time
 
     def get(self):
         """Returns state vector"""
