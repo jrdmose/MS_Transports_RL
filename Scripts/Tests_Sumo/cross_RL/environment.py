@@ -178,7 +178,7 @@ class Env:
         # b = np.round(state,decimals=1)
         # aux = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
 
-        return np.sum(diff) # delta waiting time in the network
+        return np.sign(-np.sum(diff)) # delta waiting time in the network
 
     def compute_waiting_time(self):
         aux= []
