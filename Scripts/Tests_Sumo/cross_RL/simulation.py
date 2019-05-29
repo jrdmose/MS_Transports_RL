@@ -4,6 +4,8 @@ import doubledqn
 import tools
 import memory
 import os
+import inspect
+import json
 
 import tensorflow as tf
 from keras import optimizers
@@ -75,7 +77,7 @@ class simulator:
                  train_freq = 3,
                  num_burn_in = 300,
                  batch_size = 32,
-                 optimizer = optimizers.RMSprop(lr=0.001, rho=0.95),
+                 optimizer = 'adam',
                  loss_func = "mse",
                  max_ep_length = 1000,
                  experiment_id = "Exp_1",
@@ -190,6 +192,9 @@ class simulator:
                                 experiment_id = self.experiment_id,
                                 summary_writer = self.summary_writer)
 
+        # Store initialization prameters
+        self.store_init(locals())
+
 
     def train(self):
         self.ddqn.fill_replay(self.env)
@@ -201,13 +206,19 @@ class simulator:
         #print(self.ddqn.q_network.get_weights())
 
     def load(self,checkpoint_dir):
+        with open(os.path.join(os.path.dirname(os.path.dirname(checkpoint_dir)), 'parameters.json'), 'r') as fp:
+            arguments = json.load(fp)
+        self.__init__(**arguments)
         self.ddqn.load(checkpoint_dir)
 
-    def evaluate(self,
-                 runs = 5,
-                 use_gui = False):
-        """Tests the performance of the agent"""
+    def store_init(self,init_arguments):
+        arguments = {arg:init_arguments[arg] for arg in inspect.getfullargspec(self.__init__).args[1:]}
+        arguments.pop('hparams',None)
+        with open(os.path.join(self.output_dir, 'parameters.json'), 'w') as fp:
+            json.dump(arguments, fp , indent=4)
 
+    def evaluate(self, runs = 5, use_gui = False):
+        """Tests the performance of the agent"""
         self.env.render(use_gui)
 
         evaluation_results = {
