@@ -215,8 +215,6 @@ class Env:
 
         reward = self.compute_reward(state,next_state)
 
-        print(state, next_state, reward)
-
         return state, reward, next_state, self.done()
 
     def done(self):
