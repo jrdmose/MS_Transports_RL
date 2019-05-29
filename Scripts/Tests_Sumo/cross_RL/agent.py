@@ -45,7 +45,7 @@ def simple(input_shape, num_actions):
     num_actions : (int) number of nodes of the output layer
     '''
     model = Sequential()
-    model.add(Dense(input_shape, input_shape = input_shape, activation='relu',name = "Layer_1"))
-    model.add(Dense(input_shape, activation='relu', name= "Layer_2"))
+    model.add(Dense(input_shape[0], input_shape = input_shape, activation='relu',name = "Layer_1"))
+    model.add(Dense(input_shape[0], activation='relu', name= "Layer_2"))
     model.add(Dense(num_actions, activation=None, name= "Output"))
     return model
