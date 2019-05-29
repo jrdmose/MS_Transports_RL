@@ -71,7 +71,8 @@ class Env:
                  eps,
                  use_gui = False,
                  delta_time = 10,
-                 connection_label = "lonely_worker"):
+                 connection_label = "lonely_worker",
+                 reward = "balanced"):
         """Initialises object instance.
 
         Parameters
@@ -91,6 +92,7 @@ class Env:
         self.time_step = delta_time
         self.input_lanes = ["4i_0","2i_0","3i_0","1i_0"]
         self.connection_label = connection_label
+        self.reward = reward
 
         self.render(self.use_gui)
 
@@ -175,10 +177,17 @@ class Env:
         """
         # Here is whre reward is specified
         diff = next_state - state
+        difference = -np.sum(diff[:,15:])
         # b = np.round(state,decimals=1)
         # aux = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
-
-        return -np.sum(diff[:,10:]) # delta waiting time in the network
+        if self.reward == "negative":
+            if difference < 0:
+                token = difference
+            else:
+                token = 0
+        else:
+            token = difference
+        return token # delta waiting time in the network
 
     # def compute_waiting_time(self):
     #     aux= []
@@ -211,11 +220,9 @@ class Env:
 
         # wt_next = self.compute_waiting_time()
 
-
-
         reward = self.compute_reward(state,next_state)
 
-        print(state, next_state, reward)
+        # print("state", state, "next_state", next_state, "reward", reward)
 
         return state, reward, next_state, self.done()
 
@@ -260,6 +267,7 @@ class Observation:
         self.obs = np.zeros(shape)
         self.lanes = lanes
         self.veh_time_in_lane = {lane:{} for lane in lanes}
+        self.veh_waiting_time = {lane:{} for lane in lanes}
 
     def update_state(self, connection):
         """
@@ -272,7 +280,10 @@ class Observation:
         for i,lane in enumerate(self.lanes):
             self.obs[:,i] = connection.lane.getLastStepOccupancy(lane) # Occupancy
             self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
-            self.obs[:,i+11] = self.compute_time_in_lane(connection, lane)
+            time, wt = self.compute_time_in_lane(connection, lane)
+            # print ("time", time, "wt", wt)
+            self.obs[:,i+11] = time
+            self.obs[:,i+15] = wt
 
         self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
         if self.obs[:,8] == 0:
@@ -285,26 +296,32 @@ class Observation:
     def compute_time_in_lane(self, connection, lane):
 
         previous_veh_time_in_lane = copy.deepcopy(self.veh_time_in_lane[lane])
-
         veh_in_previous_state = set(previous_veh_time_in_lane.keys())
         veh_in_state = set(connection.lane.getLastStepVehicleIDs(lane))
 
         time = 0
+        wt = 0
 
         intersection = veh_in_state & veh_in_previous_state
         for veh in intersection:
             self.veh_time_in_lane[lane][veh] += 10
+            if connection.vehicle.getSpeed(veh) == 0:
+                self.veh_waiting_time[lane][veh] += 10
+                # print(veh, "is stopped")
             time += self.veh_time_in_lane[lane][veh]
+            wt += self.veh_waiting_time[lane][veh]
 
         in_state = veh_in_state - veh_in_previous_state
         for veh in in_state:
             self.veh_time_in_lane[lane][veh] = 0
+            self.veh_waiting_time[lane][veh] = 0
 
-        in_previous_state = veh_in_previous_state -veh_in_state
+        in_previous_state = veh_in_previous_state - veh_in_state
         for veh in in_previous_state:
             self.veh_time_in_lane[lane].pop(veh)
+            self.veh_waiting_time[lane].pop(veh)
 
-        return time
+        return time, wt
 
     def get(self):
         """Returns state vector"""

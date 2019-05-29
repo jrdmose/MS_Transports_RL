@@ -90,6 +90,7 @@ class simulator:
                  num_actions = 2,
                  use_gui = False,
                  delta_time = 10,
+                 reward = "balanced",
                  # memory parameters
                  max_size = 100000,
                  # additional parameters
@@ -138,6 +139,7 @@ class simulator:
         self.num_actions = num_actions
         self.use_gui = use_gui
         self.delta_time = delta_time
+        self.reward = reward
 
         # memory parameters
         self.max_size = max_size
@@ -161,7 +163,8 @@ class simulator:
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
                                 use_gui = self.use_gui,
-                                eps = self.eps)
+                                eps = self.eps,
+                                reward = self.reward)
 
         # Initialize replay memory
         self.memory = memory.ReplayMemory(max_size = self.max_size,
