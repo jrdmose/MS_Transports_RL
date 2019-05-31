@@ -145,6 +145,8 @@ class DoubleDQN:
         """
         # Sample mini batch
         states_m, actions_m, rewards_m, states_m_p, done_m = self.memory.sample(self.batch_size)
+        states_m = np.array([[np.sum(states_m[:,15]+states_m[:,17]),np.sum(states_m[:,16]+states_m[:,18])]])
+        states_m_p = np.array([[np.sum(states_m_p[:,15]+states_m_p[:,17]),np.sum(states_m_p[:,16]+states_m_p[:,18])]])
 
         # randomly swap the target and active networks
         # if np.random.uniform() < 0.5:
@@ -221,7 +223,9 @@ class DoubleDQN:
 
                 if policy == "linDecEpsGreedy" or policy == "epsgreedy_decay":
                     kwargs["itr"] = self.itr
-
+                check = nextstate
+                # import pdb; pdb.set_trace()
+                nextstate = np.array([[np.sum(nextstate[:,15]+nextstate[:,17]),np.sum(nextstate[:,16]+nextstate[:,18])]])
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
                 state, reward, nextstate, done = env.step(action)
@@ -355,9 +359,18 @@ class DoubleDQN:
 
         while not done and transition["it"] < self.max_ep_len:
             #import pdb; pdb.set_trace()
-            transition["q_values"] = self.q_network.predict(transition["next_state"])
+            # print("next state: ", transition["next_state"][:,15:])
+            transition["q_values"] = self.q_network.predict(np.array([[
+                np.sum(transition["next_state"][:,15]
+                +transition["next_state"][:,17]),
+                np.sum(transition["next_state"][:,16]+
+                transition["next_state"][:,18])]]))
+            # print("weights: ", self.q_network.layers[0].get_weights())
+            # print("q-values: ", transition["q_values"])
             transition["action"] = env.action.select_action(policy, q_values = transition["q_values"], **kwargs)
+            # print("action: ", transition["action"])
             transition["state"], transition["reward"], transition["next_state"],done = env.step(transition["action"])
+            # print("reward: ",transition["reward"])
             transition["it"] += 1
 
             all_trans.append(copy.deepcopy(transition))

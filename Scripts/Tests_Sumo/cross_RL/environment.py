@@ -123,7 +123,8 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
                     '-r' ,self.route,
-                    '--time-to-teleport', '-1']
+                    '--time-to-teleport', '-1',
+                    ''--duration-log', 'false']
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
