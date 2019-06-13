@@ -47,6 +47,34 @@ Installing required packages
 pip3 install numpy tensorflow keras
 ```
 
+**Option 3**
+
+ Pull Docker image
+```
+docker pull sebxwolf/sumo
+```
+
+ Run Docker container
+```
+docker run -d -p 5901:5901 -p 6901:6901 -p 8888:8888 sebxwolf/sumo
+```
+In your browser, open:
+http://localhost:6901/?password=vncpassword
+
+ In the Desktop that opens, go to Applications and open Terminal Emulator
+
+ In the Terminal Emulator that opens, run
+```
+jupyter notebook --NotebookApp.token=admin --ip 0.0.0.0 --allow-root
+```
+
+ In your browser, open
+localhost:8888/tree
+
+ The password is 'admin' and you can run all your notebooks and tutorials
+
+ (based on lucasfischerberkeley/flowdesktop)
+
 ### Running tensorboard
 In terminal, run:
 ```
