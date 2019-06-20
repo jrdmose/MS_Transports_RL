@@ -10,7 +10,7 @@ import tensorflow as tf
 import copy
 import keras.backend as K
 
-SAVE_AFTER = 11000 # Save model checkpoint
+SAVE_AFTER = 10000 # Save model checkpoint
 
 class DoubleDQN:
     """The DQN agent. Handles the updating of q-networks, takes action, and gets environment response.
@@ -163,8 +163,6 @@ class DoubleDQN:
         next_q_online_network = self.q_network.predict(states_m_p)
         selected_actions = np.argmax(next_q_online_network, axis=1)
 
-
-
         # get Q values from frozen network for next state and chosen action
         # Q(s',argmax(Q(s',a', theta), theta')) (argmax wrt a')
         next_q_target = self.target_q_network.predict(states_m_p)
@@ -233,7 +231,7 @@ class DoubleDQN:
 
             while not done and stats["episode_length"] < self.max_ep_len:
 
-                if policy == "linDecEpsGreedy" or policy == "epsgreedy_decay":
+                if policy == "linDecEpsGreedy":
                     kwargs["itr"] = self.itr
 
                 q_values = self.q_network.predict(nextstate)

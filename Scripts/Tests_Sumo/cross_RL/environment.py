@@ -24,7 +24,7 @@ import traci
 
 # ENVIRONMENT CLASS
 ##################################
-WARM_UP_NET = 20 # Number of simu steps to warm up the network
+WARM_UP_NET = 10 # Number of simu steps to warm up the network
 
 class Env:
     """Main class to manage environment. Supplies the environment responses to actions taken.
@@ -68,6 +68,7 @@ class Env:
                  demand,
                  state_shape,
                  num_actions,
+                 policy,
                  eps,
                  use_gui = False,
                  delta_time = 10,
@@ -97,7 +98,7 @@ class Env:
         self.render(self.use_gui)
 
         self.state = Observation(state_shape, self.input_lanes)
-        self.action = Action(num_actions, eps)
+        self.action = Action(num_actions, policy, eps)
         self.counter = np.zeros((1,2))
 
     def warm_up_net(self, num_it):
@@ -349,11 +350,19 @@ class Action:
         Choose whether to explore or exploit.
     """
 
-    def __init__( self, num_actions, eps):
+    def __init__( self, num_actions, policy, eps):
 
         self.num_actions = num_actions
         self.action_space = np.identity(num_actions)
-        self.eps = eps
+
+        if policy == "linDecEpsGreedy":
+            self.init_eps = 1
+            self.curr_eps = 1
+            self.final_eps = eps
+
+        else:
+            self.curr_eps, self.init_eps, self.final_eps = eps,eps,eps
+
 
     def select_action(self, policy, q_values = None, **kwargs):
         """Takes policy as argument, and then calls the corresponding helper method.
@@ -370,6 +379,9 @@ class Action:
         **kwargs : arguments for helper methods
         """
 
+        print("Curr", self.init_eps)
+        print("", self.init_eps)
+
         if policy == "randUni":
             return self.select_rand(q_values) #q values not used
         elif policy == "greedy":
@@ -380,8 +392,6 @@ class Action:
             return self.select_fixed(q_values, **kwargs) #q values not used
         elif policy == "linDecEpsGreedy":
             return self.select_discepsgreedy(q_values, **kwargs)
-        elif policy == "epsgreedy_decay":
-            return self.select_epsgreedy_decay(q_values, **kwargs)
         else:
             raise ValueError("Policy {} not found".format(policy))
 
@@ -413,7 +423,7 @@ class Action:
         q_values : (np.array) predicted q-values
         """
 
-        if np.random.uniform() < self.eps:
+        if np.random.uniform() < self.curr_eps:
             return self.select_rand(q_values)
         else:
             return self.select_greedy(q_values)
@@ -432,21 +442,22 @@ class Action:
         else:
             return -1 # Do nothing
 
-    def select_discepsgreedy(self, q_values, itr, final_eps = 0.1, total_it = 100000):
+    def select_discepsgreedy(self, q_values, itr, total_it = 50000):
         """ eps-greedy policy with the eps decreasing linearly from start_eps to
             final_eps over total_it steps.
         """
         if itr < total_it:
-            self.eps = (total_it - itr) / total_it * (self.eps - final_eps) + final_eps
+            self.curr_eps = (self.final_eps - self.init_eps) / total_it * itr + self.init_eps
         else :
-            self.eps = final_eps
+            self.curr_eps = self.final_eps
+
         return self.select_epsgreedy(q_values)
 
-    def select_epsgreedy_decay(self, q_values, itr, omega = 1-1e-9):
-        """ eps-greedy policy with the eps decreasing exponentially.
-        """
-        if self.eps < 0.2:
-            self.eps = 0.2
-        else :
-            self.eps *= omega ** itr
-        return self.select_epsgreedy(q_values)
+    # def select_epsgreedy_decay(self, q_values, itr, omega = 1-1e-9):
+    #     """ eps-greedy policy with the eps decreasing exponentially.
+    #     """
+    #     if self.eps < 0.2:
+    #         self.eps = 0.2
+    #     else :
+    #         self.eps *= omega ** itr
+    #     return self.select_epsgreedy(q_values)

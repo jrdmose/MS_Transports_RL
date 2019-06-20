@@ -164,6 +164,7 @@ class simulator:
                                 demand =  self.demand,
                                 state_shape = self.state_shape,
                                 num_actions = self.num_actions,
+                                policy = self.policy,
                                 use_gui = self.use_gui,
                                 eps = self.eps,
                                 reward = self.reward)
@@ -197,7 +198,8 @@ class simulator:
 
 
     def train(self):
-        self.ddqn.fill_replay(self.env)
+        if self.memory.cur_size < self.num_burn_in:
+            self.ddqn.fill_replay(self.env)
 
         self.ddqn.train(env = self.env,
                         num_episodes = self.num_episodes,
