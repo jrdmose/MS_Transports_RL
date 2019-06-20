@@ -143,8 +143,6 @@ class DoubleDQN:
         Q_target and Q are set equal for not relevant actions so the loss is 0.
         (weights not being updated due to these actions)
         """
-        # Sample mini batch
-        states_m, actions_m, rewards_m, states_m_p, done_m = self.memory.sample(self.batch_size)
 
         # randomly swap the target and active networks
         # if np.random.uniform() < 0.5:
@@ -153,24 +151,40 @@ class DoubleDQN:
         #     self.q_network = self.target_q_network
         #     self.target_q_network = temp
 
-        #import pdb; pdb.set_trace()
-        # attach q-values to states
-        target_batch = self.q_network.predict(states_m)
-        next_state_q = self.target_q_network.predict(states_m_p)
 
-        # Predict q values for updated network on s' and choose action according to online network (q_network)
+        # Sample mini batch
+        states_m, actions_m, rewards_m, states_m_p, done_m = self.memory.sample(self.batch_size)
+
+        # get the Q values for current observations (Q(s,a, theta))
+        q_online_network = self.q_network.predict(states_m)
+
+        # get the Q values for best actions in s' based on online Q network
+        # max(Q(s', a', theta)) wrt a'
         next_q_online_network = self.q_network.predict(states_m_p)
         selected_actions = np.argmax(next_q_online_network, axis=1)
 
-        # update q-values
+
+
+        # get Q values from frozen network for next state and chosen action
+        # Q(s',argmax(Q(s',a', theta), theta')) (argmax wrt a')
+        next_q_target = self.target_q_network.predict(states_m_p)
+
+        q_target_network = copy.deepcopy(q_online_network)
+
+
         for i, action in enumerate(selected_actions):
             if done_m[i]:
-                target_batch[i,action] = rewards_m[i]
+                q_target_network[i,actions_m[i]] =  rewards_m[i]
             else:
-                target_batch[i, action] =  rewards_m[i] + self.gamma * next_state_q[i, action]
+                q_target_network[i,actions_m[i]] = rewards_m[i] + self.gamma * next_q_target[i, action]
 
+        error = q_online_network - q_target_network
+
+        mse = np.mean(np.sqrt(np.sum(error,axis=1)**2))
+        #print("error", mse)
         # keras method to train on batch that returns loss
-        fit = self.q_network.fit(states_m, target_batch, batch_size = self.batch_size, verbose = 0)
+        fit = self.q_network.fit(x =states_m, y=q_target_network, batch_size = self.batch_size, epochs =1, verbose = 0)
+
 
         # Update weights every target_update_freq steps
         if self.itr % self.target_update_freq == 0:
@@ -182,7 +196,7 @@ class DoubleDQN:
         if self.monitoring and self.itr % SAVE_AFTER == 0:
             self.save()
 
-        return fit.history["loss"][0]
+        return mse
 
     def train(self, env, num_episodes, policy, connection_label,**kwargs):
         """Main method for the agent. Trains the keras neural network instances, calls all other helper methods.
