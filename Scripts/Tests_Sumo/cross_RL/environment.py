@@ -379,8 +379,6 @@ class Action:
         **kwargs : arguments for helper methods
         """
 
-        print("Curr", self.init_eps)
-        print("", self.init_eps)
 
         if policy == "randUni":
             return self.select_rand(q_values) #q values not used
