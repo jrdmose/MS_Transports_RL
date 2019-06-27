@@ -8,9 +8,11 @@ References/*
 !References/Fundamental/
 !References/State _Action_Reward_Survey/
 
-Scripts/Tests_Sumo/cross_RL/logs
-Scripts/Tests_Sumo/cross_RL/old
-Scripts/Tests_Sumo/cross_RL_miquel
+
+### Don't include logs
+Scripts/Simple_cross/cross_RL/logs
+Scripts/Simple_cross/cross_RL_bigger_influence_area/logs
+Scripts/Simple_cross/cross_RL_miquel
 
 
 ### JupyterNotebooks ###
