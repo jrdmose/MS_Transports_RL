@@ -6,7 +6,7 @@ import numpy as np
 import tools
 
 import time
-import os, sys
+import os, sys 
 
 from keras.models import Sequential
 from keras.layers import InputLayer, Dense
@@ -187,12 +187,12 @@ class Env:
         else:
             # Set yellow phase
             self.connection.trafficlight.setPhase("0",current_phase + self.action.num_actions)
-            # RUn yellow phase for 3 seconds
-            self.connection.simulationStep(self.connection.simulation.getTime() + 3)
+            # RUn yellow phase for 7 seconds
+            self.connection.simulationStep(self.connection.simulation.getTime() + 7)
             # Now change phase to next_phase
             self.connection.trafficlight.setPhase("0",next_phase)
             # RUn next phase the remaining time of 7 - time_step
-            self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step -3)
+            self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step -7)
 
             # Reset TL time for the previous phase
             self.state.obs[:, 2 * len(self.input_lanes) + 1 + current_phase] = 0
