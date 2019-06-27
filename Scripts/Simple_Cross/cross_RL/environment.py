@@ -130,7 +130,7 @@ class Env:
             self.step(action)
 
 
-    def start_simulation(self, parent_dir = None, eval_label = 'tripinfo.xml' ):
+    def start_simulation(self, parent_dir = None, output_type = '--tripinfo-output', eval_label = 'tripinfo.xml' ):
         """Opens a connection to sumo/traci [with or without GUI] and
         updates obs atribute  (the current state of the environment).
         """
@@ -139,11 +139,13 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
                     '-r' ,self.route,
-                    '--time-to-teleport', '-1']
+                    '--time-to-teleport', '-1',
+                    '--device.emissions.probability','1.0']
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(os.path.join(parent_dir,eval_label))
+
 
 
         traci.start(sumo_cmd, label = self.connection_label)
@@ -280,20 +282,29 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', fixed,
                     '-r' ,self.route,
-                    '--time-to-teleport', '-1']
+                    '--time-to-teleport', '-1',
+                    '--device.emissions.probability','1.0']
 
 
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
-            #sumo_cmd.append('--device.emissions.probability 1.0')
             sumo_cmd.append(os.path.join(parent_dir,eval_label))
 
         label = str(self.connection_label) + "_fixed"
 
+
+
         traci.start(sumo_cmd, label = label)
         fixed_con = traci.getConnection(label)
-        fixed_con.simulationStep(self.max_ep_len*self.time_step)
+
+        t = 10
+        done = False
+        while not done:
+            fixed_con.simulationStep(t)
+            t += self.time_step
+            done = fixed_con.simulation.getMinExpectedNumber() == 0
+
         fixed_con.close()
 
 
