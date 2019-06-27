@@ -10,9 +10,9 @@ References/*
 
 
 ### Don't include logs
-Scripts/Simple_cross/cross_RL/logs
-Scripts/Simple_cross/cross_RL_bigger_influence_area/logs
-Scripts/Simple_cross/cross_RL_miquel
+Scripts/Simple_Cross/cross_RL/logs
+Scripts/Simple_Cross/cross_RL_bigger_influence_area/logs
+Scripts/Simple_Cross/cross_RL_miquel
 
 
 ### JupyterNotebooks ###
