@@ -272,6 +272,7 @@ class DoubleDQN:
             #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
             if self.monitoring:
+
                 self.write_tf_summary_after_ep(stats, done)
 
             all_stats.append(stats)
