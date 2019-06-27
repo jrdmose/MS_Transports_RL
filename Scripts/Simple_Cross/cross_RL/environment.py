@@ -361,8 +361,11 @@ class Observation:
             # self.obs[:,i+11] = time
             # self.obs[:,i+15] = wt
 
+
         # Update current phase and time this phase has been on
+
         current_phase = connection.trafficlight.getPhase("0")
+
         self.obs[:,3 * len(self.lanes)] = current_phase # Traffic light phase
         self.obs[:,3 * len(self.lanes) + 1 + current_phase] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
 
