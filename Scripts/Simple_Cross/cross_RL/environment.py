@@ -6,7 +6,7 @@ import numpy as np
 import tools
 
 import time
-import os, sys
+import os, sys 
 
 from keras.models import Sequential
 from keras.layers import InputLayer, Dense
@@ -63,6 +63,7 @@ class Env:
     """
 
     def __init__(self,
+                 network,
                  net_file,
                  route_file,
                  demand,
@@ -70,10 +71,12 @@ class Env:
                  num_actions,
                  policy,
                  eps,
+                 max_ep_len,
                  use_gui = False,
                  delta_time = 10,
                  connection_label = "lonely_worker",
-                 reward = "balanced"):
+                 reward = "balanced"
+                 ):
         """Initialises object instance.
 
         Parameters
@@ -86,12 +89,23 @@ class Env:
         use_gui : (bool) Whether to run SUMO simulation with GUI visualisation
         delta_time : (int) Simulation seconds between actions
         """
+        self.network = network
         self.net = net_file
         self.route = route_file
         self.use_gui = use_gui
         self.demand = demand
         self.time_step = delta_time
-        self.input_lanes = ["4i_0","2i_0","3i_0","1i_0"]
+        self.max_ep_len = max_ep_len
+
+        if self.network == "simple":
+            self.input_lanes = ["-e01_0","-e03_0", "-e05_0", "-e07_0"]
+
+        if self.network == "complex":
+            self.input_lanes = ["-e01_0" , "-e01_1", "-e01_2",
+                                "-e03_0" , "-e03_1", "-e03_2",
+                                "-e05_0" , "-e05_1", "-e05_2",
+                                "-e07_0" , "-e07_1", "-e07_2",]
+
         self.connection_label = connection_label
         self.reward = reward
 
@@ -99,7 +113,6 @@ class Env:
 
         self.state = Observation(state_shape, self.input_lanes)
         self.action = Action(num_actions, policy, eps)
-        self.counter = np.zeros((1,2))
 
     def warm_up_net(self, num_it):
         """ Runs the environment for some iterations to fill the network.
@@ -110,16 +123,18 @@ class Env:
 
         num_it =  number of simulation steps to run
         """
+
+        #print("Warm up network")
         for i in range(num_it):
-            action = self.action.select_action("fixed", state = self.state, v_row_t = 20, h_row_t = 40)
+            action = self.action.select_action("randUni")
             self.step(action)
 
 
-    def start_simulation(self, parent_dir = None ):
+    def start_simulation(self, parent_dir = None, eval_label = 'tripinfo.xml' ):
         """Opens a connection to sumo/traci [with or without GUI] and
         updates obs atribute  (the current state of the environment).
         """
-        tools.generate_routefile(route_file_dir = self.route, demand = self.demand)
+        tools.generate_routefile(route_file_dir = self.route, demand = self.demand, network = self.network)
 
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
@@ -128,12 +143,14 @@ class Env:
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
-            sumo_cmd.append(parent_dir + '/tripinfo.xml')
+            sumo_cmd.append(os.path.join(parent_dir,eval_label))
 
 
         traci.start(sumo_cmd, label = self.connection_label)
         # print('Started connection for worker #', self.connection_label)
         self.connection = traci.getConnection(self.connection_label)
+
+
         self.state.update_state(connection = self.connection)
         self.warm_up_net(WARM_UP_NET)
         self.state.update_state(connection = self.connection)
@@ -151,22 +168,36 @@ class Env:
         ----------
         action : (int) index of the one-hot encoded vector of action to be taken
         """
-
         #action = 0 -> row vertically
-        if action == 0 and self.connection.trafficlight.getPhase("0") != 0:
-            self.connection.trafficlight.setPhase("0",3)
-            self.counter += self.state.get()[:,-2:]
-            self.state.get()[:,-2:] = 0
-        #action = 1 -> row horizontally
-        elif action == 1 and self.connection.trafficlight.getPhase("0") != 2:
-            self.connection.trafficlight.setPhase("0",1)
-            self.counter += self.state.get()[:,-2:]
-            self.state.get()[:,-2:] = 0
+        # action = 1 -> vertical cross
+        # action = 2 -> row horizontally
+        # action 3 -> horizontal cross
+
+        current_phase = self.connection.trafficlight.getPhase("0")
+        next_phase = action
+        # print(next_phase)
+
+        #import pdb; pdb.set_trace()
+
+
+        if current_phase == next_phase:
+            # Simu
+            self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
+
         else:
-            try:
-                action == -1 # Do nothing (for fixed policy)
-            except:
-                raise ValueError("Action ''{}'' not a valid action".format(action))
+            # Set yellow phase
+            self.connection.trafficlight.setPhase("0",current_phase + self.action.num_actions)
+            # RUn yellow phase for 7 seconds
+            self.connection.simulationStep(self.connection.simulation.getTime() + 7)
+            # Now change phase to next_phase
+            self.connection.trafficlight.setPhase("0",next_phase)
+            # RUn next phase the remaining time of 7 - time_step
+            self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step -7)
+
+            # Reset TL time for the previous phase
+            self.state.obs[:, 2 * len(self.input_lanes) + 1 + current_phase] = 0
+
+
 
     def compute_reward(self, state, next_state):
         """ Computes reward from state and next_state.
@@ -177,8 +208,8 @@ class Env:
         next_state: (np.array) vector of next state
         """
         # Here is whre reward is specified
-        diff = next_state - state
-        difference = -np.sum(diff[:,15:])
+        difference = state - next_state
+        #difference = -np.sum(diff[:,15:])
         # b = np.round(state,decimals=1)
         # aux = np.divide(a, b, out=np.zeros_like(a), where=b!=0)
         if self.reward == "negative":
@@ -190,11 +221,13 @@ class Env:
             token = difference
         return token # delta waiting time in the network
 
-    # def compute_waiting_time(self):
-    #     aux= []
-    #     for lane in self.input_lanes:
-    #         aux.append(self.connection.lane.getWaitingTime(lane))
-    #     return np.array(aux)
+    def compute_waiting_time(self):
+
+        wt = 0
+        for lane in self.input_lanes:
+            wt += sum( self.state.veh_waiting_time[lane].values() )
+            #print("lane", lane, "wt" ,np.sum( list( self.state.veh_waiting_time[lane].values() )))
+        return wt
 
     def step(self, action):
         """ Runs one step of the simulation.
@@ -211,21 +244,58 @@ class Env:
 
 
         state = copy.deepcopy(self.state.get())
-        # wt = self.compute_waiting_time()
 
+        wt = self.compute_waiting_time()
+
+        # Take an action and simulate next time step
         self.take_action(action)
 
-        self.connection.simulationStep(self.connection.simulation.getTime() + self.time_step) # Run the simulation time_step (s)
+        # Update state after simulation
         self.state.update_state(connection = self.connection)
         next_state = self.state.get()
 
-        # wt_next = self.compute_waiting_time()
+        wt_next = self.compute_waiting_time()
 
-        reward = self.compute_reward(state,next_state)
+        # Waiting time not present in state representation
+        reward = self.compute_reward(wt,wt_next)
 
-        # print("state", state, "next_state", next_state, "reward", reward)
+        #print("state", state, "next_state", next_state, "reward", reward)
 
         return state, reward, next_state, self.done()
+
+    def run_fixed(self, parent_dir, eval_label):
+        """
+        Evaluate network with previously set fixed policy in .net file.
+        """
+
+
+        if self.network == "simple":
+            fixed = os.path.join(os.path.split(self.net)[0],"simple_cross_no_RL.net.xml")
+
+
+        if self.network == "complex":
+            fixed = os.path.join(os.path.split(self.net)[0],"complex_cross_no_RL.net.xml")
+
+
+        sumo_cmd = [self.sumo_binary,
+                    '-n', fixed,
+                    '-r' ,self.route,
+                    '--time-to-teleport', '-1']
+
+
+
+        if parent_dir:
+            sumo_cmd.append('--tripinfo-output')
+            #sumo_cmd.append('--device.emissions.probability 1.0')
+            sumo_cmd.append(os.path.join(parent_dir,eval_label))
+
+        label = str(self.connection_label) + "_fixed"
+
+        traci.start(sumo_cmd, label = label)
+        fixed_con = traci.getConnection(label)
+        fixed_con.simulationStep(self.max_ep_len*self.time_step)
+        fixed_con.close()
+
 
     def done(self):
         """Calls sumo/traci to check whether there are still cars in the network"""
@@ -280,21 +350,29 @@ class Observation:
 
         for i,lane in enumerate(self.lanes):
             self.obs[:,i] = connection.lane.getLastStepOccupancy(lane) # Occupancy
-            self.obs[:,i+4] = connection.lane.getLastStepMeanSpeed(lane)/19.44 # Average speed
-            time, wt = self.compute_time_in_lane(connection, lane)
-            # print ("time", time, "wt", wt)
-            self.obs[:,i+11] = time
-            self.obs[:,i+15] = wt
+            self.obs[:,i+ len(self.lanes)] = connection.lane.getLastStepMeanSpeed(lane)/connection.lane.getMaxSpeed(lane)# Average speed
 
-        self.obs[:,8] = connection.trafficlight.getPhase("0") # Traffic light phase
-        if self.obs[:,8] == 0:
-            # Amount of time phase 0 (vertical row) has been on since last phase change
-            self.obs[:,9] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
-        elif self.obs[:,8] == 2:
-            # Amount of time phase 2 (horizontal row) has been on since last phase change
-            self.obs[:,10] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
+            self.compute_time_in_lane(connection, lane) # waiting time in lane
+            self.obs[:,i+ 2*len(self.lanes)] = sum( self.veh_waiting_time[lane].values() )
+
+
+            # time, wt = self.compute_time_in_lane(connection, lane)
+            # # print ("time", time, "wt", wt)
+            # self.obs[:,i+11] = time
+            # self.obs[:,i+15] = wt
+
+        # Update current phase and time this phase has been on
+        current_phase = connection.trafficlight.getPhase("0")
+        self.obs[:,3 * len(self.lanes)] = current_phase # Traffic light phase
+        self.obs[:,3 * len(self.lanes) + 1 + current_phase] = connection.trafficlight.getPhaseDuration("0") - (connection.trafficlight.getNextSwitch("0") - connection.simulation.getTime())
+
+
+
 
     def compute_time_in_lane(self, connection, lane):
+        """ Computes the overall waiting time in the network. (Cumulative sum
+        of waiting time for vehicles IN the network)
+        """
 
         previous_veh_time_in_lane = copy.deepcopy(self.veh_time_in_lane[lane])
         veh_in_previous_state = set(previous_veh_time_in_lane.keys())
@@ -303,6 +381,8 @@ class Observation:
         time = 0
         wt = 0
 
+        # If the vehicle was in the previous state in the network and
+        # is still now in the network, update waiting times
         intersection = veh_in_state & veh_in_previous_state
         for veh in intersection:
             self.veh_time_in_lane[lane][veh] += 10
@@ -312,17 +392,22 @@ class Observation:
             time += self.veh_time_in_lane[lane][veh]
             wt += self.veh_waiting_time[lane][veh]
 
+        # If the vehicle just got in the network
+        # initialize waiting times for that vehicle
         in_state = veh_in_state - veh_in_previous_state
         for veh in in_state:
             self.veh_time_in_lane[lane][veh] = 0
             self.veh_waiting_time[lane][veh] = 0
 
+        # If the vehicle left the network
+        # take it out from the list of vehicles in the network
         in_previous_state = veh_in_previous_state - veh_in_state
         for veh in in_previous_state:
             self.veh_time_in_lane[lane].pop(veh)
             self.veh_waiting_time[lane].pop(veh)
 
-        return time, wt
+
+
 
     def get(self):
         """Returns state vector"""
@@ -426,21 +511,21 @@ class Action:
         else:
             return self.select_greedy(q_values)
 
-    def select_fixed(self, q_values, state, v_row_t, h_row_t):
-        """ Feeds into select_action method.
-        It gives right of way horizontally h_row_t seconds.
-        It gives right of way vertically v_row_t seconds.
-        """
-        #Vertical row
-        if state.get()[:,9] > v_row_t:
-            return 1
-        #Horizontal row
-        elif state.get()[:,10] > h_row_t:
-            return 0
-        else:
-            return -1 # Do nothing
+    # def select_fixed(self, q_values, state, v_row_t, h_row_t):
+    #     """ Feeds into select_action method.
+    #     It gives right of way horizontally h_row_t seconds.
+    #     It gives right of way vertically v_row_t seconds.
+    #     """
+    #     #Vertical row
+    #     if state.get()[:,9] > v_row_t:
+    #         return 1
+    #     #Horizontal row
+    #     elif state.get()[:,10] > h_row_t:
+    #         return 0
+    #     else:
+    #         return -1 # Do nothing
 
-    def select_discepsgreedy(self, q_values, itr, total_it = 50000):
+    def select_discepsgreedy(self, q_values, itr, total_it = 30000):
         """ eps-greedy policy with the eps decreasing linearly from start_eps to
             final_eps over total_it steps.
         """
