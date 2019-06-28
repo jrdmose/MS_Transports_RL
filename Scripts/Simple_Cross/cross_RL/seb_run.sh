@@ -1,2 +1,2 @@
-python Simple_run_4_reproduce.py
-python Complex_run_4_reproduce.py
+python grid_search_seb_complex.py
+python grid_search_seb_simple.py
