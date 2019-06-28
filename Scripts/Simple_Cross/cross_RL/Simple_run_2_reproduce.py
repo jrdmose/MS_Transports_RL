@@ -42,9 +42,9 @@ param = {
     "max_size" : [10000],#,70000], # 20000,50000,70000,[100000]
     "max_ep_length" : [1000],
     "policy" : ["linDecEpsGreedy"],# "linDecEpsGreedy"],#, "epsGreedy"],
-    "eps" : [0.3],#, 0.3, 0.1],
+    "eps" : [0.1],#, 0.3, 0.1],
     "delta_time" : [10],#,10,10,10,10,10,10,10],
-    "reward" : ["negative"],#,"negative"]
+    "reward" : ["balanced"],#,"negative"]
     "seed" : [1,5,8,12,20,24,50,61]
     #"optimizer": [optimizers.RMSprop(lr= 0.001), optimizers.Adagrad(), optimizers.Adam()]
 }
@@ -101,7 +101,7 @@ def worker_task(position, args):
 
                     policy = args["policy"],
                     eps = args["eps"],
-                    num_episodes = 100,
+                    num_episodes = 300,
                     monitoring = True,
                     episode_recording = False,
                     eval_fixed = True,

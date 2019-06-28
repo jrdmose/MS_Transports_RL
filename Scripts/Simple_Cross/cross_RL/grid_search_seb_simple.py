@@ -1,6 +1,3 @@
-# IMPORTS
-##########################
-
 import agent
 import environment
 import doubledqn
@@ -27,25 +24,22 @@ def iter_params(**kwargs):
     for instance in itertools.product(*vals):
         yield dict(zip(keys, instance))
 
-# REPRODUCEº
-###############################################################
 
-experiment_id = "Complex_run_2_reproduce"
+experiment_id = "Simple_Balanced_Negative_Policy"
 
 
 param = {
 
     "batch_size" : [30], #,50],#,50],# 30,50,60,[70]
-    "target_update_freq" : [5000],#,40000],# 100000],  #10000], # 10000,20000,30000,[40000]
+    "target_update_freq" : [5000,10000],#,40000],# 100000],  #10000], # 10000,20000,30000,[40000]
     "gamma" : [0.99],#,0.95],# # 0.98,0.99,0.995,[0.999]
     "train_freq" : [1],#,4], # 2,3,4,[5]
     "max_size" : [10000],#,70000], # 20000,50000,70000,[100000]
     "max_ep_length" : [1000],
-    "policy" : ["linDecEpsGreedy"],# "linDecEpsGreedy"],#, "epsGreedy"],
-    "eps" : [0.1],#, 0.3, 0.1],
-    "delta_time" : [10],#,10,10,10,10,10,10,10],
-    "reward" : ["balanced"],#,"negative"]
-    "seed" : [1,5,8,12,20,24,50,61]
+    "policy" : ["epsGreedy","linDecEpsGreedy"],#, "epsGreedy"],
+    "eps" : [0.2, 0.1, 0.05],
+    "delta_time" : [10],#,10,10,10],#,10,10,10,10,10,10,10],
+    "reward" : ["balanced","negative"]
     #"optimizer": [optimizers.RMSprop(lr= 0.001), optimizers.Adagrad(), optimizers.Adam()]
 }
 
@@ -84,12 +78,12 @@ def worker_task(position, args):
                     opt_metric = None,
 
                    # environment parameters
-                    network = "complex", # complex
-                    net_file = "complex_cross.net.xml", # "complex_cross.net.xml",
+                    network = "simple", # complex
+                    net_file = "simple_cross.net.xml", # "complex_cross.net.xml",
                     route_file = "cross.rou.xml",
                     demand = "rush",
-                    state_shape = (1,41),#(1,41)
-                    num_actions = 4, #4
+                    state_shape = (1,15),#(1,41)
+                    num_actions = 2, #4
                     use_gui = False,
                     delta_time = args["delta_time"],
                     reward = args["reward"],
@@ -104,8 +98,7 @@ def worker_task(position, args):
                     num_episodes = 300,
                     monitoring = True,
                     episode_recording = False,
-                    eval_fixed = True,
-                    seed = args["seed"],
+                    eval_fixed = False,
                     hparams = args.keys())
 
 
