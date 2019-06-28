@@ -101,7 +101,7 @@ def worker_task(position, args):
 
                     policy = args["policy"],
                     eps = args["eps"],
-                    num_episodes = 60,
+                    num_episodes = 100,
                     monitoring = True,
                     episode_recording = False,
                     eval_fixed = True,

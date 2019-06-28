@@ -121,21 +121,21 @@ def generate_routefile(route_file_dir, demand, network):
 
         for i in range(N):
             if random.uniform(0, 1) < pWE*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="WE_%i" type="car" color="red" route="WE" depart="%i" />' % (
+                print('    <vehicle id="WE_%i" type="car" color="red" route="WE" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pWS*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="WS_%i" type="car" route="WS" depart="%i" />' % (
+                print('    <vehicle id="WS_%i" type="car" route="WS" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pWN*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="WN_%i" type="car" route="WN" depart="%i" />' % (
+                print('    <vehicle id="WN_%i" type="car" route="WN" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
 
 
             if random.uniform(0, 1) < pEW*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="EW_%i" type="car" color="red" route="EW" depart="%i" />' % (
+                print('    <vehicle id="EW_%i" type="car" color="red" route="EW" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pES*get_veh_sec(i,demand,high,nominal,N):
@@ -143,35 +143,35 @@ def generate_routefile(route_file_dir, demand, network):
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pEN*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="EN_%i" type="car" route="EN" depart="%i" />' % (
+                print('    <vehicle id="EN_%i" type="car" route="EN" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
 
 
             if random.uniform(0, 1) < pSW*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="SW_%i" type="car" route="SW" depart="%i" />' % (
+                print('    <vehicle id="SW_%i" type="car" route="SW" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pSE*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="SE_%i" type="car" route="SE" depart="%i" />' % (
+                print('    <vehicle id="SE_%i" type="car" route="SE" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pSN*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="SN_%i" type="car" color="red" route="SN" depart="%i" />' % (
+                print('    <vehicle id="SN_%i" type="car" color="red" route="SN" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
 
 
             if random.uniform(0, 1) < pNW*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="NW_%i" type="car" route="NW" depart="%i" />' % (
+                print('    <vehicle id="NW_%i" type="car" route="NW" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pNE*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="NE_%i" type="car" route="NE" depart="%i" />' % (
+                print('    <vehicle id="NE_%i" type="car" route="NE" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
             if random.uniform(0, 1) < pNS*get_veh_sec(i,demand,high,nominal,N):
-                print('    <vehicle id="NS_%i" type="car" color="red" route="NS" depart="%i" />' % (
+                print('    <vehicle id="NS_%i" type="car" color="red" route="NS" depart="%i" departSpeed="max" departPos="last" departLane="best" />' % (
                     vehNr, i), file=routes)
                 vehNr += 1
 

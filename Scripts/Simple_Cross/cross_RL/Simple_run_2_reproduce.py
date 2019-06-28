@@ -30,7 +30,7 @@ def iter_params(**kwargs):
 # REPRODUCEº
 ###############################################################
 
-experiment_id = "Simple_run_4_reproduce"
+experiment_id = "Simple_run_2_reproduce"
 
 
 param = {
@@ -101,7 +101,7 @@ def worker_task(position, args):
 
                     policy = args["policy"],
                     eps = args["eps"],
-                    num_episodes = 200,
+                    num_episodes = 100,
                     monitoring = True,
                     episode_recording = False,
                     eval_fixed = True,
