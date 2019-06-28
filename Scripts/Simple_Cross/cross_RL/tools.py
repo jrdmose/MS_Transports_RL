@@ -94,11 +94,11 @@ def generate_routefile(route_file_dir, demand, network):
 
     # demand per second from different directions
 
-    pEW,pWE = tuple(np.repeat(1/10,2))
-    pNS,pSN= tuple(np.repeat(1/40,2))
+    pEW,pWE = tuple(np.repeat(1/20,2))
+    pNS,pSN= tuple(np.repeat(1/80,2))
     if network == "complex":
-        pEN,pES,pWN,pWS = tuple(np.repeat(1/20,4))
-        pNE,pSE,pNW,pSW = tuple(np.repeat(1/80,4))
+        pEN,pES,pWN,pWS = tuple(np.repeat(1/40,4))
+        pNE,pSE,pNW,pSW = tuple(np.repeat(1/160,4))
     else:
         pEN,pES,pWN,pWS,pNE,pSE,pNW,pSW = tuple(np.repeat(0,8))
 
