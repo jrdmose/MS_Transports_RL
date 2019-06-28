@@ -90,7 +90,7 @@ def generate_routefile(route_file_dir, demand, network):
     N = 3600  # number of time steps
 
     nominal = 1
-    high =4 # At rush hour two times more cars
+    high =3 # At rush hour two times more cars
 
     # demand per second from different directions
 
