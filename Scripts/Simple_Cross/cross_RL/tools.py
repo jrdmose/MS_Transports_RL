@@ -65,42 +65,24 @@ def get_output_folder(output_dir, exp_id, args_description):
 
 def get_veh_sec(x, demand,high, nominal,total_time):
 
+    factor = 10
     if demand == "rush":
         part = total_time/5
         if x < part:
-            return np.random.normal(nominal, nominal/10)
+            return np.random.normal(nominal, nominal/factor)
         if x < 2*part:
             aux = (nominal-high)/(-part)*x + nominal + (nominal-high)
-            return np.random.normal(aux, aux/10)
+            return np.random.normal(aux, aux/factor)
         if x < 3*part:
-            return high
+            return np.random.normal(high, high/factor)
         if x < 4*part:
             aux = -(high-nominal)/(part)*x + high+(high-nominal)*3
-            return np.random.normal(aux, aux/10)
+            return np.random.normal(aux, aux/factor)
         else:
-            return np.random.normal(nominal, nominal/10)
+            return np.random.normal(nominal, nominal/factor)
     else:
         return 1
 
-def get_veh_sec_eval(x, demand,high, nominal,total_time):
-
-    if demand == "rush":
-        part = total_time/5
-        if x < part:
-            aux = (nominal-high)/(-part)*x + nominal + (nominal-high)
-            return np.random.normal(aux, aux/10)
-
-
-            return np.random.normal(nominal, nominal/10)
-        if x < 2*part:
-            return high
-        if x < 3*part:
-            aux = -(high-nominal)/(part)*x + high+(high-nominal)*3
-            return np.random.normal(aux, aux/10)
-        if x < total_time:
-            return np.random.normal(nominal, nominal/10)
-    else:
-        return 1
 
 def generate_routefile(route_file_dir, demand, network):
     """Returns XML file specifying network layout for sumo simulation"""
@@ -108,7 +90,7 @@ def generate_routefile(route_file_dir, demand, network):
     N = 3600  # number of time steps
 
     nominal = 1
-    high =2 # At rush hour two times more cars
+    high =3 # At rush hour two times more cars
 
     # demand per second from different directions
 

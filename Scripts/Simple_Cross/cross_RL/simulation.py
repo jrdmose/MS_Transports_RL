@@ -99,6 +99,7 @@ class simulator:
                  policy = "linDecEpsGreedy",
                  eps = 0.1,
                  num_episodes = 2,
+                 eval_fixed = False,
                  monitoring = False,
                  episode_recording = False,
                  seed = 1,
@@ -135,6 +136,7 @@ class simulator:
         self.num_episodes = num_episodes
         self.monitoring = monitoring
         self.episode_recording = episode_recording
+        self.eval_fixed = eval_fixed
         self.output_dir, self.summary_writer_folder = tools.get_output_folder("./logs", self.experiment_id, args_description)
         self.summary_writer = tf.summary.FileWriter(logdir = self.summary_writer_folder)
 
@@ -209,10 +211,13 @@ class simulator:
         if self.memory.cur_size < self.num_burn_in:
             self.ddqn.fill_replay(self.env)
 
-        self.ddqn.train(env = self.env,
+        train_data = self.ddqn.train(env = self.env,
                         num_episodes = self.num_episodes,
                         policy = self.policy,
+                        eval_fixed = self.eval_fixed,
                         connection_label = self.connection_label)
+
+        return train_data
         #print(self.ddqn.q_network.get_weights())
 
     def load(self,checkpoint_dir):
