@@ -40,3 +40,19 @@ All simulations have been done in a rush hour scenario
     ?
 
 ## Different length of relevant lanes
+
+- Simple
+  Big lanes seem much more volatile in average_delay than a shorter lane area. Particularly bad big with balanced reward with 5/5 nothing
+  finished in evaluation.
+
+  Particularly interesting is run5 in Simple which fails to finish even having good training curves. The problem is the last car gets stucked
+  and the light does not open. (SImilarly as what we detected in the linear case) I was not able to reproduce this. Probably there is something
+  wwrong with seeds.
+
+  Overall, impression of volatility for longer influence area and evaluate results higher with higher number of runs not finished. See word for RESULTS
+
+  Selected runs: Simple run 7, 4.
+
+  / Rsults stored in "/Experiment_results/Simple_Balanced_Negative_Reward/ and /Experiment_results/Big_Simple_Balanced_Negative_Reward/
+
+  - Complex

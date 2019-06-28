@@ -274,7 +274,6 @@ class Env:
         if self.network == "simple":
             fixed = os.path.join(os.path.split(self.net)[0],"simple_cross_no_RL.net.xml")
 
-
         if self.network == "complex":
             fixed = os.path.join(os.path.split(self.net)[0],"complex_cross_no_RL.net.xml")
 
@@ -298,14 +297,29 @@ class Env:
         traci.start(sumo_cmd, label = label)
         fixed_con = traci.getConnection(label)
 
-        t = 10
+        t = 0
         done = False
+        reward = 0
         while not done:
-            fixed_con.simulationStep(t)
+
+            wt = self.compute_waiting_time()
+
             t += self.time_step
+            fixed_con.simulationStep(t)
+
+            for lane in self.input_lanes:
+                self.state.compute_time_in_lane(fixed_con, lane)
+
+            wt_next = self.compute_waiting_time()
+
+            reward += self.compute_reward(wt, wt_next)
+
             done = fixed_con.simulation.getMinExpectedNumber() == 0
 
+
         fixed_con.close()
+
+        return reward, t/self.time_step, np.mean(tools.get_vehicle_delay(parent_dir, eval_label)) #Reward, ep_length, av_delay
 
 
     def done(self):

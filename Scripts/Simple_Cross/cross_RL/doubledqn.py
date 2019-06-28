@@ -196,7 +196,7 @@ class DoubleDQN:
 
         return mse
 
-    def train(self, env, num_episodes, policy, connection_label,**kwargs):
+    def train(self, env, num_episodes, policy, connection_label, eval_fixed = False, **kwargs):
         """Main method for the agent. Trains the keras neural network instances, calls all other helper methods.
 
         Parameters
@@ -226,7 +226,9 @@ class DoubleDQN:
             stats = {
                 'ep_id' : self.trained_episodes,
                 'total_reward': 0,
-                'episode_length': 0
+                'episode_length': 0,
+                'av_delay' :0,
+                'label' : 'RL'
             }
 
             #print("...training")
@@ -273,9 +275,16 @@ class DoubleDQN:
 
             if self.monitoring:
 
-                self.write_tf_summary_after_ep(stats, done)
+                 stats['av_delay'] = np.mean(self.write_tf_summary_after_ep(stats, done))
 
-            all_stats.append(stats)
+            all_stats.append(stats.copy())
+
+            if eval_fixed:
+
+                stats["total_reward"], stats["episode_length"], stats["av_delay"] = env.run_fixed(self.output_dir, eval_label = f'tripinfo_fixed.xml')
+                stats["label"] = 'fixed'
+                all_stats.append(stats.copy())
+
             self.trained_episodes += 1
 
         return all_stats
@@ -348,6 +357,8 @@ class DoubleDQN:
                        #                  simple_value = static_dur)]
 
         self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
+
+        return vehicle_delay
 
 
     def evaluate(self, env, policy,eval_label, **kwargs):
