@@ -56,3 +56,12 @@ All simulations have been done in a rush hour scenario
   / Rsults stored in "/Experiment_results/Simple_Balanced_Negative_Reward/ and /Experiment_results/Big_Simple_Balanced_Negative_Reward/
 
   - Complex
+
+  Again the overall perception is a higher volatility for bigger lane which seeems to lead to a less stable output in terms of evaluation results.
+  Overall, evaluate results more or les the same for big and normal even for runs not finished. See word for RESULTS
+
+  To keep scenario as the simple case we will choose Complex scenario with small lane.
+
+  Selected runs: Complex runs run 2, 4
+
+  Run 2 seem completely stable in all situations. Strong candidate for fine tuned.
