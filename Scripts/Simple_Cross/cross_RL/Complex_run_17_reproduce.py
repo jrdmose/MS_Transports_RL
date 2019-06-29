@@ -30,19 +30,19 @@ def iter_params(**kwargs):
 # REPRODUCEº
 ###############################################################
 
-experiment_id = "Complex_run_2_reproduce"
+experiment_id = "Complex_run_17_reproduce"
 
 
 param = {
 
     "batch_size" : [30], #,50],#,50],# 30,50,60,[70]
-    "target_update_freq" : [5000],#,40000],# 100000],  #10000], # 10000,20000,30000,[40000]
+    "target_update_freq" : [10000],#,40000],# 100000],  #10000], # 10000,20000,30000,[40000]
     "gamma" : [0.99],#,0.95],# # 0.98,0.99,0.995,[0.999]
     "train_freq" : [1],#,4], # 2,3,4,[5]
     "max_size" : [10000],#,70000], # 20000,50000,70000,[100000]
     "max_ep_length" : [1000],
-    "policy" : ["linDecEpsGreedy"],# "linDecEpsGreedy"],#, "epsGreedy"],
-    "eps" : [0.1],#, 0.3, 0.1],
+    "policy" : ["epsGreedy"],# "linDecEpsGreedy"],#, "epsGreedy"],
+    "eps" : [0.05],#, 0.3, 0.1],
     "delta_time" : [10],#,10,10,10,10,10,10,10],
     "reward" : ["balanced"],#,"negative"]
     "seed" : [1,5,8,12,20,24,50,61]
@@ -101,7 +101,7 @@ def worker_task(position, args):
 
                     policy = args["policy"],
                     eps = args["eps"],
-                    num_episodes = 300,
+                    num_episodes = 250,
                     monitoring = True,
                     episode_recording = False,
                     eval_fixed = True,

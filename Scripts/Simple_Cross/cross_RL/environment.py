@@ -324,7 +324,7 @@ class Env:
 
     def done(self):
         """Calls sumo/traci to check whether there are still cars in the network"""
-        return self.connection.simulation.getMinExpectedNumber() == 0
+        return self.connection.simulation.getMinExpectedNumber() <= 2
 
     def stop_simulation(self):
         """Closes the sumo/traci connection"""
@@ -523,7 +523,7 @@ class Action:
 
         return np.argmax(q_values)
 
-    def select_epsgreedy(self, q_values):
+    def select_epsgreedy(self, q_values,**eps):
         """Feeds into select_action method.
         If explore, select action randomly,
         if exploit, select action greedily using the predicted q values
@@ -533,8 +533,12 @@ class Action:
         eps : (int) exploration paramter
         q_values : (np.array) predicted q-values
         """
+        if eps:
+            curr_eps = eps["eps"]
+        else:
+            curr_eps = self.curr_eps
 
-        if np.random.uniform() < self.curr_eps:
+        if np.random.uniform() < curr_eps:
             return self.select_rand(q_values)
         else:
             return self.select_greedy(q_values)

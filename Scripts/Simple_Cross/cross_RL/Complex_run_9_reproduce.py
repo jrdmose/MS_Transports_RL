@@ -30,7 +30,7 @@ def iter_params(**kwargs):
 # REPRODUCEº
 ###############################################################
 
-experiment_id = "Simple_run_4_reproduce"
+experiment_id = "Complex_run_17_reproduce"
 
 
 param = {
@@ -44,7 +44,7 @@ param = {
     "policy" : ["linDecEpsGreedy"],# "linDecEpsGreedy"],#, "epsGreedy"],
     "eps" : [0.1],#, 0.3, 0.1],
     "delta_time" : [10],#,10,10,10,10,10,10,10],
-    "reward" : ["negative"],#,"negative"]
+    "reward" : ["balanced"],#,"negative"]
     "seed" : [1,5,8,12,20,24,50,61]
     #"optimizer": [optimizers.RMSprop(lr= 0.001), optimizers.Adagrad(), optimizers.Adam()]
 }
@@ -84,12 +84,12 @@ def worker_task(position, args):
                     opt_metric = None,
 
                    # environment parameters
-                    network = "simple", # complex
-                    net_file = "simple_cross.net.xml", # "complex_cross.net.xml",
+                    network = "complex", # complex
+                    net_file = "complex_cross.net.xml", # "complex_cross.net.xml",
                     route_file = "cross.rou.xml",
                     demand = "rush",
-                    state_shape = (1,15),#(1,41)
-                    num_actions = 2, #4
+                    state_shape = (1,41),#(1,41)
+                    num_actions = 4, #4
                     use_gui = False,
                     delta_time = args["delta_time"],
                     reward = args["reward"],
@@ -101,7 +101,7 @@ def worker_task(position, args):
 
                     policy = args["policy"],
                     eps = args["eps"],
-                    num_episodes = 300,
+                    num_episodes = 250,
                     monitoring = True,
                     episode_recording = False,
                     eval_fixed = True,
