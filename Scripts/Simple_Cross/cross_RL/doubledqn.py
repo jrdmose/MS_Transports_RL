@@ -389,7 +389,7 @@ class DoubleDQN:
             transition["action"] = env.action.select_action(policy, q_values = transition["q_values"], **kwargs)
             transition["state"], transition["reward"], transition["next_state"],done = env.step(transition["action"])
             transition["it"] += 1
-
+            
             all_trans.append(copy.deepcopy(transition))
 
         if not done and transition["it"] >= self.max_ep_len:

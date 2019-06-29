@@ -252,7 +252,7 @@ class simulator:
                                                         runs))
 
 
-            all_trans, mean_delay, fixed_mean_delays = self.ddqn.evaluate(env = self.env, policy = "greedy", eval_label = str(i))
+            all_trans, mean_delay, fixed_mean_delays = self.ddqn.evaluate(env = self.env, policy = "epsGreedy", eval_label = str(i), **{'eps':0.01})
 
 
             #evaluation_results["episode_delay_lists"].append(vehicle_delays)
