@@ -12,7 +12,9 @@ def get_model(model_name, **kwargs):
     Parameters
     ----------
     model_name : (str) Name of the network architecture to be used to instantiate q-network
-    *args : arguments to be passed onto helper functions
+        -'linear': neural network with one input layer and not activation, i.e. linear combination of inputs
+        -'simple': neural network with two hidden layers fully connected and relu activations.
+    **kwargs : arguments to be passed onto helper functions
     """
     if model_name == 'linear':
         return linear(**kwargs)

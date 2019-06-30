@@ -1,2 +1,0 @@
-python grid_search_seb_complex.py
-python grid_search_seb_simple.py

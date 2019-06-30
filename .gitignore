@@ -3,17 +3,20 @@
 */.ipynb_checkpoints/*
 
 
-### Include some references only ###
+### Don't include references, MoMs, Networks_maps, Data ###
 References/*
-!References/Fundamental/
-!References/State _Action_Reward_Survey/
+MoM/*
+Networks_maps/*
 
 
 ### Don't include logs
-Scripts/Simple_Cross/cross_RL/logs
-Scripts/Simple_Cross/cross_RL_bigger_influence_area/logs
-Scripts/Simple_Cross/cross_RL_miquel
-Scripts/Simple_Cross/Experiment_results
+Scripts/logs
+Scripts/old
+Scripts/Experiment_results
+
+
+
+### Don't include MOMs
 
 
 ### JupyterNotebooks ###

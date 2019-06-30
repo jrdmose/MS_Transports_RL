@@ -15,10 +15,10 @@ SAVE_AFTER = 10000 # Save model checkpoint
 class DoubleDQN:
     """The DQN agent. Handles the updating of q-networks, takes action, and gets environment response.
 
-    Attributes
+    To initialize
     ----------
-    q_network : keras model instance to predict q-values for current state
-    target_q_network : keras model instance to predict q-values for state after action
+    q_network : (str) keras model instance to predict q-values for current state ('simple' or 'linear')
+    target_q_network :  (str) keras model instance to predict q-values for state after action ('simple' or 'linear')
     memory : memory instance - needs to be instantiated first # should this be instantiated here?
     gamma : (int) discount factor for rewards
     target_update_freq : (int) defines after how many steps the q-network should be re-trained
@@ -26,12 +26,16 @@ class DoubleDQN:
         if you collect a couple samples for your replay memory, for every Q-network update that you run.
     num_burn_in : (int) defines the size of the replay memory to be filled before, using a specified policy
     batch_size : (int) size of batches to be used to train models
-    trained_episodes : (int) episode counter
+    optimizer : (str) keras optimizer identifier ('adam')
+    loss_func : (str) keras loss func identifier ('mse')
     max_ep_len : (int) stops simulation after specified number of episodes
     output_dir : (str) directory to write tensorboard log and model checkpoints
+    monitoring : (bool) store episode logs in tensorboard
+    episode_recording : (bool) store intra episode logs in tensorboard
     experiment_id : (str) ID of simulation
     summary_writer : tensorboard summary stat writer instance
-    itr : (int) counts global training steps in all run episodes
+    model_checkpoint : (bool) store keras model checkpoints during training
+
 
     Methods
     -------
@@ -66,25 +70,18 @@ class DoubleDQN:
                  optimizer,
                  loss_func,
                  max_ep_length,
-                 env_name,
                  output_dir,
                  monitoring,
                  episode_recording,
                  experiment_id,
                  summary_writer,
                  model_checkpoint = True,
-                 opt_metric = None # Used to judge the performance of the ANN
                  ):
-        """
-        # TODO: specify defaults for required arguments
 
-        Parameters
-        ----------
-        """
         self.q_network = q_network
         self.target_q_network = target_q_network
         self.target_q_network.set_weights(self.q_network.get_weights())
-        self.__compile(optimizer, loss_func, opt_metric)
+        self.__compile(optimizer, loss_func)
         self.memory = memory
         self.gamma = gamma
         self.target_update_freq = target_update_freq
@@ -101,11 +98,11 @@ class DoubleDQN:
         self.itr = 0
 
 
-    def __compile(self, optimizer, loss_func, opt_metric):
+    def __compile(self, optimizer, loss_func):
         """Initialisation method, using the keras instance compile method. """
 
-        self.q_network.compile(optimizer, loss_func, opt_metric)
-        self.target_q_network.compile(optimizer, loss_func, opt_metric)
+        self.q_network.compile(optimizer, loss_func)
+        self.target_q_network.compile(optimizer, loss_func)
 
 
     def fill_replay(self, env):
@@ -115,7 +112,6 @@ class DoubleDQN:
         Parameters
         ----------
         env :  environment instance
-        policy : (str) policy to be used to fill memory
         """
 
         print("Filling experience replay memory...")
@@ -139,9 +135,7 @@ class DoubleDQN:
     def update_network(self):
         """Helper method for train. Computes keras neural network updates using samples from memory.
 
-        Notice that we want to incur in loss in the actions that we have selected.
-        Q_target and Q are set equal for not relevant actions so the loss is 0.
-        (weights not being updated due to these actions)
+        returns loss
         """
 
         # randomly swap the target and active networks
@@ -166,10 +160,9 @@ class DoubleDQN:
         # get Q values from frozen network for next state and chosen action
         # Q(s',argmax(Q(s',a', theta), theta')) (argmax wrt a')
         next_q_target = self.target_q_network.predict(states_m_p)
-
         q_target_network = copy.deepcopy(q_online_network)
 
-
+        # Compute targets
         for i, action in enumerate(selected_actions):
             if done_m[i]:
                 q_target_network[i,actions_m[i]] =  rewards_m[i]
@@ -180,6 +173,7 @@ class DoubleDQN:
 
         mse = np.mean(np.sqrt(np.sum(error,axis=1)**2))
         #print("error", mse)
+
         # keras method to train on batch that returns loss
         fit = self.q_network.fit(x =states_m, y=q_target_network, batch_size = self.batch_size, epochs =1, verbose = 0)
 
@@ -196,7 +190,7 @@ class DoubleDQN:
 
         return mse
 
-    def train(self, env, num_episodes, policy, connection_label,**kwargs):
+    def train(self, env, num_episodes, policy, connection_label, eval_fixed = False, **kwargs):
         """Main method for the agent. Trains the keras neural network instances, calls all other helper methods.
 
         Parameters
@@ -204,6 +198,10 @@ class DoubleDQN:
         env: (str) name of environment instance
         num_episodes: (int) number of training episodes
         policy: (str) name of policy to use to fill memory initially
+        connection_label: (str) label for TraCI to comunicate with SUMO. Used in parallelised computations.
+        eval_fixed : (bool) Evaluate fixed policy during training. Used for plotting
+
+        returns training logs
         """
 
         all_stats = []
@@ -211,6 +209,7 @@ class DoubleDQN:
         start_train_ep = self.trained_episodes
 
         for i in range(num_episodes):
+
             # print progress of training
             if self.trained_episodes % 1 == 0:
                 print('Run {} -- running episode {} / {}'.format(connection_label,
@@ -218,27 +217,29 @@ class DoubleDQN:
                                                             start_train_ep + num_episodes))
 
             # Each time an episode is run need to create a new random routing
+            # and get initial state
             env.start_simulation(self.output_dir)
-
             nextstate = env.state.get()
             done = False
 
+            # Train logs
             stats = {
                 'ep_id' : self.trained_episodes,
                 'total_reward': 0,
-                'episode_length': 0
+                'episode_length': 0,
+                'av_delay' :0,
+                'label' : 'RL'
             }
 
-            #print("...training")
+
             while not done and stats["episode_length"] < self.max_ep_len:
 
                 if policy == "linDecEpsGreedy":
                     kwargs["itr"] = self.itr
 
+                # Get transition
                 q_values = self.q_network.predict(nextstate)
                 action = env.action.select_action(policy, q_values = q_values, **kwargs)
-                #import pdb; pdb.set_trace()
-
                 state, reward, nextstate, done = env.step(action)
 
                 # print( "state", np.round(state,3), "\n",
@@ -246,41 +247,50 @@ class DoubleDQN:
                 #        "reward",reward,"\n",
                 #        "next_state", np.round(nextstate,3),"\n")
 
-                #import pdb; pdb.set_trace()
 
+                # Store transition in memory replay buffer
                 self.memory.append(state, action, reward, nextstate, done)
 
-                # Update network weights and record loss for Tensorboard
+                # Update network weights every train_freq steps
                 if self.itr % self.train_freq == 0:
                     loss = self.update_network()
 
+                # Store logs for tensorboard
                 if self.monitoring:
                     # create list of stats for Tensorboard, add scalars
                     self.write_tf_summary_within_ep(loss, nextstate, done, q_values, reward)
 
                 self.itr += 1
 
+                # Update train logs
                 stats["ep_id"] = self.trained_episodes
                 stats["episode_length"] += 1
                 stats['total_reward'] += reward
 
-
-
             env.stop_simulation()
 
-            # Static policy evaluation for comparison during training
-            #_,static_dur = self.evaluate(env,"fixed", v_row_t = 40, h_row_t = 40)
 
             if self.monitoring:
-                self.write_tf_summary_after_ep(stats, done)
 
-            all_stats.append(stats)
+                 stats['av_delay'] = np.mean(self.write_tf_summary_after_ep(stats, done))
+
+            all_stats.append(stats.copy())
+
+            if eval_fixed:
+                # Run fixed policy scenario with same set up than RL (route and net file) for comparison
+                stats["total_reward"], stats["episode_length"], stats["av_delay"] = env.run_fixed(self.output_dir, eval_label = f'tripinfo_fixed.xml')
+                stats["label"] = 'fixed'
+                all_stats.append(stats.copy())
+
             self.trained_episodes += 1
 
         return all_stats
 
 
     def write_tf_summary_within_ep(self, loss, nextstate, done, q_values, reward):
+        """
+        Helper function for tensorboard
+        """
 
         # record TD loss as scalar and add to list of stats to record
         training_data = [tf.Summary.Value(tag = '[1 - Main]: TD - loss',
@@ -327,6 +337,9 @@ class DoubleDQN:
 
 
     def write_tf_summary_after_ep(self, stats, done):
+        """
+        Helper function for tensorboard weight histograms
+        """
 
         vehicle_delay = tools.get_vehicle_delay(self.output_dir)
 
@@ -348,6 +361,8 @@ class DoubleDQN:
 
         self.summary_writer.add_summary(tf.Summary(value = episode_summary), global_step=self.trained_episodes)
 
+        return vehicle_delay
+
 
     def evaluate(self, env, policy,eval_label, **kwargs):
         """Use trained agent to run a simulation.
@@ -355,6 +370,10 @@ class DoubleDQN:
         Parameters
         ----------
         env : environment instance
+        policy : (str) policy to use when evaluating agent ('epsGredy', 'greedy', ...)
+        eval_label : (str) label to identify repeated evaluations of the same set up
+
+        returns evaluation logs
         """
         env.start_simulation(self.output_dir, eval_label = f'tripinfo_eval_{eval_label}.xml')
         nextstate = env.state.get()
@@ -441,6 +460,9 @@ class DoubleDQN:
         self.q_network.save(filename)
 
     def load(self, filename):
+        """
+        Load trained keras model .h5 extension
+        """
         self.q_network.load_weights(filename)
 
     def named_logs(self, q_network, logs):
@@ -449,5 +471,4 @@ class DoubleDQN:
         result = {}
         for l in zip(q_network.metrics_names, logs):
             result[l[0]] = l[1]
-
         return result

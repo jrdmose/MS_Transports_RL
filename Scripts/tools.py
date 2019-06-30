@@ -4,15 +4,24 @@ import os, sys
 import random
 import numpy as np
 import xml.etree.ElementTree as ET
+import simulation
+
+import multiprocessing
+import itertools
+import re
+import glob
+import json
+import pandas as pd
 
 def get_output_folder(output_dir, exp_id, args_description):
-    """Return save folder parent_dir/Results/exp_id
+    """Return save folder output_dir/logs/exp_id
 
-    If this directory already exists it creates parent_dir/Results/exp_id_{i},
+    If this directory already exists it creates parent_dir/logs/exp_id_{i},
     being i the next smallest free number.
 
-    Inside this directory it also creates a sub-directory called model_checkpoints to
-    store intermediate training steps.
+    Inside this directory it also creates two sub-directories:
+        - model_checkpoints to store model intermediate training steps.
+        - tensorboard logs with name the args of the model
 
     This is just convenient so that if you run the
     same script multiple times tensorboard can plot all of the results
@@ -20,12 +29,12 @@ def get_output_folder(output_dir, exp_id, args_description):
 
     Parameters
     ----------
-    parent_dir : str
+    output_dir : str
         Path of the directory where results will be stored.
 
     Returns
     -------
-    parent_dir/Results/exp_id
+    outputidir/logs/exp_id
         Path to this run's save directory.
     """
     try:
@@ -59,11 +68,13 @@ def get_output_folder(output_dir, exp_id, args_description):
     return output_dir , summary_writer_folder
 
 
-### TO DO
-# Create a class to specify different types of demand
-
 
 def get_veh_sec(x, demand,high, nominal,total_time):
+    """
+    Helper class for tunning the probabilities of a car entering in each lane
+    in rush hour demand setup
+    """
+
 
     factor = 10
     if demand == "rush":
@@ -85,7 +96,7 @@ def get_veh_sec(x, demand,high, nominal,total_time):
 
 
 def generate_routefile(route_file_dir, demand, network):
-    """Returns XML file specifying network layout for sumo simulation"""
+    """Returns XML file specifying demand file for sumo simulation"""
 
     N = 3600  # number of time steps
 
@@ -179,6 +190,9 @@ def generate_routefile(route_file_dir, demand, network):
 
 
 def get_vehicle_delay(output_dir, eval_label = 'tripinfo.xml'):
+    """
+    Once the simulation is done, it returns the total mean delay of the vehicles
+    """
 
     tree = ET.parse(os.path.join(output_dir,eval_label))
     root = tree.getroot()
@@ -189,3 +203,136 @@ def get_vehicle_delay(output_dir, eval_label = 'tripinfo.xml'):
         vehicle_delay.append(float(veh.get("duration")))
 
     return vehicle_delay
+
+
+# functions for the gridsearch
+# -worker
+# -worker_task
+# -gridsearch
+# -iter_params
+
+
+def worker(input, output):
+    """Runs through a chunk of the grid"""
+
+    for position, args in iter(input.get, 'STOP'):
+        result = worker_task(position, args)
+        output.put(result)
+
+
+def worker_task(position, args):
+    """Tells the worker what to do with grid chunk"""
+    # print('Run', position + 1, '-- parameters', args)
+
+    sumo_RL = simulation.simulator(connection_label = position +1, **args)
+
+    # print("training agent", position + 1)
+    train_data = sumo_RL.train()
+    # print("evaluating agent", position + 1)
+    evaluation_results = sumo_RL.evaluate(runs = 5)
+
+    return ({"run" : position + 1,
+             "args" : args,
+             "eval_delay" : evaluation_results,
+             "eval_mean_delay" : evaluation_results["average_delay"],
+             "train_data": train_data})
+
+
+def gridsearch(param_grid, log_path):
+    """Runs a parallelised gridsearch"""
+
+    multiprocessing.freeze_support()
+
+    number_of_processes = multiprocessing.cpu_count()
+
+    # Set up task list
+    tasks = [(idx, val) for idx, val in enumerate(param_grid)]
+
+    print(tasks)
+
+    # Create queues
+    task_queue = multiprocessing.Queue()
+    done_queue = multiprocessing.Queue()
+
+    # Submit tasks
+    for task in tasks:
+        task_queue.put(task)
+    # Start worker processes
+    for i in range(number_of_processes):
+        print('Started process #', i + 1)
+        multiprocessing.Process(target = worker,
+                                args = (task_queue, done_queue)).start()
+
+    with open(os.path.join(log_path, "GS_results.json"), "w") as file:
+            file.write('{ "results": [')
+
+    # Get and print results
+    results = []
+    for i in range(len(tasks)):
+        results.append(done_queue.get())
+
+        with open(os.path.join(log_path, "GS_results.json"), "a") as file:
+            json.dump(results[-1], file , indent=4)
+            if i != len(tasks)-1:
+                file.write(",\n")
+
+    with open(os.path.join(log_path, "GS_results.json"), "a") as file:
+        file.write("]}")
+
+        #print('%s -- [RESULTS]: Run %s -- Parameters %s -- Mean duration %6.0f' % results[-1])
+
+    # Tell child processes to stop
+    for i in range(number_of_processes):
+        task_queue.put('STOP')
+
+
+def iter_params(**kwargs):
+    keys = kwargs.keys()
+    vals = kwargs.values()
+    for instance in itertools.product(*vals):
+        yield dict(zip(keys, instance))
+
+
+def get_grid_search_results(path):
+
+    path = os.path.join(path,'GS_results.json')
+
+    gs_results= {
+        "run_id" : [],
+        "unfinished_runs" : [],
+        "RL_mean_delay" : [],
+        "fixed_mean_delay" : [],
+        "reward" : [],
+        "policy" : [],
+        "eps" : [],
+        "update_freq" : []
+
+    }
+
+    with open(path) as file:
+        data = json.load(file)
+
+        for run in data['results']:
+
+            gs_results["run_id"].append(run["run"])
+            gs_results["unfinished_runs"].append(run["eval_delay"]["unfinished_runs"])
+            gs_results["RL_mean_delay"].append(run["eval_delay"]["average_delay"])
+            gs_results["fixed_mean_delay"].append(np.mean(run["eval_delay"]["episode_mean_delays_fixed"]))
+            gs_results["reward"].append(run["args"]["reward"])
+            gs_results["policy"].append(run["args"]["policy"])
+            gs_results["eps"].append(run["args"]["eps"])
+            gs_results["update_freq"].append(run["args"]["target_update_freq"])
+    return pd.DataFrame(gs_results)
+
+
+def load_last_model_checkpoint(logs_path,run):
+    """
+    Loads last model checkpoint of the training
+    returns a simulation object
+    """
+    model_folder = os.path.join(logs_path, 'run_'+str(run), "model_checkpoints/")
+    model_path = max(glob.iglob(model_folder+"/*.h5"), key = os.path.getmtime)
+    sumo_RL = simulation.simulator()
+    sumo_RL.load(model_path)
+
+    return(sumo_RL)

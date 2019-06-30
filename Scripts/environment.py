@@ -1,6 +1,9 @@
 # IMPORTS
 ##########################
 
+import warnings
+warnings.filterwarnings("ignore")
+
 import copy
 import numpy as np
 import tools
@@ -32,25 +35,48 @@ class Env:
     Sends commands to sumo to take an action, receives state information,
     computes rewards. Does so step by step to allow q-network to train batch-wise.
 
-    Attributes
-    ----------
-    net : (str) points to the SUMO .net.xml file which specifies network arquitechture
-    route : (str) points to the SUMO .rou.xml file which specified traffic demand
-    use_gui : (bool) Whether to run SUMO simulation with GUI visualisation
-    time_step : (int) Simulation seconds between actions
-    sumo_binary : (str) Points to the binary to run sumo
-    num_actions : (int) number of actions (traffic signal phases)
+
+
+     network : (str) network complexity ('simple' or 'complex')
+     net_file : (str) SUMO .net.xml file
+     route_file : (str) SUMO .rou.xml file
+     demand : (str) demand scenario ('rush' or 'nominal')
+     state_shape, : (tup) state shape
+     num_actions : (int) number of actions (traffic signal phases)
+     policy : (str) policy to choose actions ('epsGredy', 'linDecEpsGreedy', 'greedy' 'randUni')
+     eps : (float) exploration factor
+        if policy = 'linDecEpsGreedy' -> The epsilon will decay from 1 to eps
+        if policy = 'epsGredy' -> eps to evaluate eps policy
+     max_ep_len : (int) max episode length
+     use_gui : (bool) wether to use user interface
+     delta_time : (int) simulation time between actions
+     connection_label : (str) TraCI connection label with SUMO
+     reward : type of reward. ('balanced' or 'negative')
+
 
     Methods
     -------
+
+    render()
+        render simulation
+
     start_simulation()
         Opens call to sumo
+
+    warm_up_net(num_it)
+        DOes some simulation steps without training to fill the network with cars.
 
     take_action(action)
         Sets the traffic lights according to the action fed as argument
 
     compute_reward(state, next_state)
         Takes the current state and next state (from object state) and computes reward
+
+    compute_waiting_time()
+        Computes the cumultive waiting time in lanes
+
+    run_fixed(parent_dir, eval_label)
+        Runs a fixed policy episode
 
     step(action)
         Combines take_action, compute_reward and update_state (from observation object)
@@ -78,16 +104,6 @@ class Env:
                  reward = "balanced"
                  ):
         """Initialises object instance.
-
-        Parameters
-        ----------
-        connection: (str) name of sumo connection
-        net_file : (str) SUMO .net.xml file
-        route_file : (str) SUMO .rou.xml file
-        state_shape : (np.array) 2-dimensional array specifying state space dimensions
-        num_actions : (int) specifying the number of actions available
-        use_gui : (bool) Whether to run SUMO simulation with GUI visualisation
-        delta_time : (int) Simulation seconds between actions
         """
         self.network = network
         self.net = net_file
@@ -129,8 +145,7 @@ class Env:
             action = self.action.select_action("randUni")
             self.step(action)
 
-
-    def start_simulation(self, parent_dir = None, eval_label = 'tripinfo.xml' ):
+    def start_simulation(self, parent_dir = None, output_type = '--tripinfo-output', eval_label = 'tripinfo.xml' ):
         """Opens a connection to sumo/traci [with or without GUI] and
         updates obs atribute  (the current state of the environment).
         """
@@ -139,11 +154,13 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', self.net,
                     '-r' ,self.route,
-                    '--time-to-teleport', '-1']
+                    '--time-to-teleport', '-1',
+                    '--device.emissions.probability','1.0']
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
             sumo_cmd.append(os.path.join(parent_dir,eval_label))
+
 
 
         traci.start(sumo_cmd, label = self.connection_label)
@@ -197,8 +214,6 @@ class Env:
             # Reset TL time for the previous phase
             self.state.obs[:, 2 * len(self.input_lanes) + 1 + current_phase] = 0
 
-
-
     def compute_reward(self, state, next_state):
         """ Computes reward from state and next_state.
 
@@ -206,6 +221,8 @@ class Env:
         ----------
         state : (np.array) vector of current state
         next_state: (np.array) vector of next state
+
+        returns reward
         """
         # Here is whre reward is specified
         difference = state - next_state
@@ -222,7 +239,11 @@ class Env:
         return token # delta waiting time in the network
 
     def compute_waiting_time(self):
+        """
+        Computes the cumultive waiting time in lanes
 
+        returns total waiting time
+        """
         wt = 0
         for lane in self.input_lanes:
             wt += sum( self.state.veh_waiting_time[lane].values() )
@@ -240,6 +261,8 @@ class Env:
         Parameters
         ----------
         action : (int) index of the one-hot encoded vector of action to be taken
+
+        returns transition (s,a,r,s')
         """
 
 
@@ -272,7 +295,6 @@ class Env:
         if self.network == "simple":
             fixed = os.path.join(os.path.split(self.net)[0],"simple_cross_no_RL.net.xml")
 
-
         if self.network == "complex":
             fixed = os.path.join(os.path.split(self.net)[0],"complex_cross_no_RL.net.xml")
 
@@ -280,26 +302,49 @@ class Env:
         sumo_cmd = [self.sumo_binary,
                     '-n', fixed,
                     '-r' ,self.route,
-                    '--time-to-teleport', '-1']
+                    '--time-to-teleport', '-1',
+                    '--device.emissions.probability','1.0']
 
 
 
         if parent_dir:
             sumo_cmd.append('--tripinfo-output')
-            #sumo_cmd.append('--device.emissions.probability 1.0')
             sumo_cmd.append(os.path.join(parent_dir,eval_label))
 
         label = str(self.connection_label) + "_fixed"
 
+
+
         traci.start(sumo_cmd, label = label)
         fixed_con = traci.getConnection(label)
-        fixed_con.simulationStep(self.max_ep_len*self.time_step)
+
+        t = 0
+        done = False
+        reward = 0
+        while not done:
+
+            wt = self.compute_waiting_time()
+
+            t += self.time_step
+            fixed_con.simulationStep(t)
+
+            for lane in self.input_lanes:
+                self.state.compute_time_in_lane(fixed_con, lane)
+
+            wt_next = self.compute_waiting_time()
+
+            reward += self.compute_reward(wt, wt_next)
+
+            done = fixed_con.simulation.getMinExpectedNumber() == 0
+
+
         fixed_con.close()
 
+        return reward, t/self.time_step, np.mean(tools.get_vehicle_delay(parent_dir, eval_label)) #Reward, ep_length, av_delay
 
     def done(self):
         """Calls sumo/traci to check whether there are still cars in the network"""
-        return self.connection.simulation.getMinExpectedNumber() == 0
+        return self.connection.simulation.getMinExpectedNumber() <= 2
 
     def stop_simulation(self):
         """Closes the sumo/traci connection"""
@@ -320,6 +365,11 @@ class Observation:
         reads the state through a call to sumo/traci
             --> modify here to include additional state variables,
             but make sure to also modify state_shape when running the simulation!
+
+    compute_time_in_lane(connection, lane)
+        Updates the overall waiting time in the network. (Cumulative sum
+        of waiting time for vehicles IN the network)
+
 
     get()
         returns state
@@ -373,7 +423,7 @@ class Observation:
 
 
     def compute_time_in_lane(self, connection, lane):
-        """ Computes the overall waiting time in the network. (Cumulative sum
+        """ Updates the overall waiting time in the network. (Cumulative sum
         of waiting time for vehicles IN the network)
         """
 
@@ -436,6 +486,9 @@ class Action:
 
     select_epsgreedy(eps, q_values)
         Choose whether to explore or exploit.
+
+    select_discepsgreedy(self, q_values, itr, total_it = 30000)
+        Updates epsilon to compute eps greedy choices
     """
 
     def __init__( self, num_actions, policy, eps):
@@ -498,7 +551,7 @@ class Action:
 
         return np.argmax(q_values)
 
-    def select_epsgreedy(self, q_values):
+    def select_epsgreedy(self, q_values,**eps):
         """Feeds into select_action method.
         If explore, select action randomly,
         if exploit, select action greedily using the predicted q values
@@ -508,8 +561,12 @@ class Action:
         eps : (int) exploration paramter
         q_values : (np.array) predicted q-values
         """
+        if eps:
+            curr_eps = eps["eps"]
+        else:
+            curr_eps = self.curr_eps
 
-        if np.random.uniform() < self.curr_eps:
+        if np.random.uniform() < curr_eps:
             return self.select_rand(q_values)
         else:
             return self.select_greedy(q_values)
