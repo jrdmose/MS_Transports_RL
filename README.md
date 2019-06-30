@@ -8,6 +8,8 @@ Supervisors: Hrvoje Stojic and Anestis Papanikolaou
 
 ### Thesis description
 
+We develop a traffic light control agent that can manage traffic lights with the objective to reduce traffic jams, trip time and other traffic metrics in a given network using reinforcement learning. To this end, we implement a Double Deep Q-Network algorithm and test its performance in controlling traffic lights on a ’small’ and a ’large’ traffic junction. We find that this algorithm beats a fixed traffic light phase program when traffic demand fluctuates, as it is capable of reacting to real-time traffic situations. The algorithm can be scaled up and holds promise to also perform well in controlling larger transport networks. For more information check the report.
+
 ### Guide for folders:
 
 - Scripts: Any script is needed to run the simulation. Also a couple of examples of how to run the code
