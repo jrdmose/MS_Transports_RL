@@ -4,9 +4,9 @@
 
 
 ### Don't include references, MoMs, Networks_maps, Data ###
-References/*
-MoM/*
-Networks_maps/*
+References
+MoM
+Networks_maps
 
 
 ### Don't include logs
@@ -16,7 +16,11 @@ Scripts/Experiment_results
 
 
 
-### Don't include MOMs
+
+
+### Don't include plotting notebooks
+/Scripts/Plotting.ipynb
+/Scripts/Evaluating.ipynb
 
 
 ### JupyterNotebooks ###
