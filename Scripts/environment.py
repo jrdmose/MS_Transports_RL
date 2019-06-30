@@ -326,7 +326,7 @@ class Env:
             wt = self.compute_waiting_time()
 
             t += self.time_step
-            fixed_con.simulationStep(t)
+            fixed_con.simulationStep(float(t))
 
             for lane in self.input_lanes:
                 self.state.compute_time_in_lane(fixed_con, lane)

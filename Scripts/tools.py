@@ -248,7 +248,6 @@ def gridsearch(param_grid, log_path):
     # Set up task list
     tasks = [(idx, val) for idx, val in enumerate(param_grid)]
 
-    print(tasks)
 
     # Create queues
     task_queue = multiprocessing.Queue()
