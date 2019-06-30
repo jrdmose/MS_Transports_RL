@@ -1,5 +1,4 @@
 # Deep reinforcement learning for the optimization of traffic light control with real-time data 
----
 
 Master thesis of Data Science BGSE masters program
 
