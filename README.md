@@ -10,11 +10,7 @@ Supervisors: Hrvoje Stojic and Anestis Papanikolaou
 
 ### Guide for folders:
 
-- MoM : Minutes of meeting of the weekly talks
-- References : Important references
-
-- Data: Network and demand files needed for SUMO simulations
-- Scripts: Any script is needed to run the simulation.
+- Scripts: Any script is needed to run the simulation. Also a couple of examples of how to run the code
 - Report
 - Videos: Recordings of an evaluation episode in split screen: DDQN agent vs benchmark policy
 
