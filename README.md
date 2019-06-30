@@ -1,4 +1,4 @@
-# Deep Reinforcement learning applied to transport network
+# Deep Reinforcement learning applied to transport networks
 
 Master thesis of Data Science BGSE masters program
 
@@ -16,6 +16,7 @@ Supervisors: Hrvoje Stojic and Anestis Papanikolaou
 - Data: Network and demand files needed for SUMO simulations
 - Scripts: Any script is needed to run the simulation.
 - Report
+- Videos: Recordings of an evaluation episode in split screen: DDQN agent vs benchmark policy
 
 ### Installation guide
 
