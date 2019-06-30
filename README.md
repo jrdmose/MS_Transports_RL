@@ -1,4 +1,5 @@
-# Deep Reinforcement learning applied to transport networks
+# Deep reinforcement learning for the optimization of traffic light control with real-time data 
+---
 
 Master thesis of Data Science BGSE masters program
 
@@ -73,13 +74,4 @@ localhost:8888/tree
  The password is 'admin' and you can run all your notebooks and tutorials
 
  (based on lucasfischerberkeley/flowdesktop)
-
-### Running tensorboard
-In terminal, run:
-```
-tensorboard --logdir ./Scripts/Tests_Sumo/cross_RL/Logs/[name of experiment]
-```
-Then open a browser and enter:
-```
-http://localhost:6006/
 ```
